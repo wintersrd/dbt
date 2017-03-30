@@ -270,11 +270,7 @@ class Compiler(object):
         context = self.project.context()
         adapter = get_adapter(self.project.run_environment())
 
-        if dbt.flags.NON_DESTRUCTIVE or \
-                get_materialization(model) == 'incremental':
-            table_name = model.get('name')
-        else:
-            table_name = '{}__dbt_tmp'.format(model.get('name'))
+        this_table = model.get('name')
 
         # built-ins
         context['ref'] = self.__ref(context, model, flat_graph)
@@ -381,9 +377,13 @@ class Compiler(object):
                 # the SQL at the parser level.
                 pass
 
-            else:
+            elif(is_type(injected_node, NodeType.Model) and
+                 get_materialization(injected_node) == 'ephemeral'):
+                pass
 
-                context = self.get_compiler_context(linker, injected_node, injected_graph)
+            else:
+                context = self.get_compiler_context(
+                    linker, injected_node, injected_graph)
                 wrapped_stmt = dbt.wrapper.wrap(
                     injected_node,
                     self.project,
