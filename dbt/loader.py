@@ -9,7 +9,7 @@ class GraphLoader(object):
     _LOADERS = {'nodes': [], 'macros': []}
 
     @classmethod
-    def load_all(cls, root_project, all_projects):
+    def load_all(cls, root_project, all_projects, savepoint=None):
         to_return = {}
 
         subgraphs = ['nodes', 'macros']
@@ -19,7 +19,7 @@ class GraphLoader(object):
 
             for loader in cls._LOADERS[subgraph]:
                 subgraph_nodes.update(
-                    loader.load_all(root_project, all_projects))
+                    loader.load_all(root_project, all_projects, savepoint))
 
             to_return[subgraph] = subgraph_nodes
 
@@ -38,17 +38,19 @@ class GraphLoader(object):
 class ResourceLoader(object):
 
     @classmethod
-    def load_all(cls, root_project, all_projects):
+    def load_all(cls, root_project, all_projects, savepoint):
         to_return = {}
 
         for project_name, project in all_projects.items():
-            to_return.update(cls.load_project(root_project, all_projects,
-                                              project, project_name))
+            to_return.update(
+                cls.load_project(root_project, all_projects,
+                                 project, project_name, savepoint))
 
         return to_return
 
     @classmethod
-    def load_project(root_project, all_projects, project, project_name):
+    def load_project(
+            cls, root_project, all_projects, project, project_name, savepoint):
         raise dbt.exceptions.NotImplementedException(
             'load_project is not implemented for this loader!')
 
@@ -56,7 +58,8 @@ class ResourceLoader(object):
 class MacroLoader(ResourceLoader):
 
     @classmethod
-    def load_project(cls, root_project, all_projects, project, project_name):
+    def load_project(
+            cls, root_project, all_projects, project, project_name, savepoint):
         return dbt.parser.load_and_parse_macros(
             package_name=project_name,
             root_project=root_project,
@@ -69,20 +72,23 @@ class MacroLoader(ResourceLoader):
 class ModelLoader(ResourceLoader):
 
     @classmethod
-    def load_project(cls, root_project, all_projects, project, project_name):
+    def load_project(
+            cls, root_project, all_projects, project, project_name, savepoint):
         return dbt.parser.load_and_parse_sql(
-                package_name=project_name,
-                root_project=root_project,
-                all_projects=all_projects,
-                root_dir=project.get('project-root'),
-                relative_dirs=project.get('source-paths', []),
-                resource_type=NodeType.Model)
+            package_name=project_name,
+            root_project=root_project,
+            all_projects=all_projects,
+            root_dir=project.get('project-root'),
+            relative_dirs=project.get('source-paths', []),
+            resource_type=NodeType.Model,
+            savepoint=savepoint)
 
 
 class AnalysisLoader(ResourceLoader):
 
     @classmethod
-    def load_project(cls, root_project, all_projects, project, project_name):
+    def load_project(
+            cls, root_project, all_projects, project, project_name, savepoint):
         return dbt.parser.load_and_parse_sql(
             package_name=project_name,
             root_project=root_project,
@@ -95,7 +101,8 @@ class AnalysisLoader(ResourceLoader):
 class SchemaTestLoader(ResourceLoader):
 
     @classmethod
-    def load_project(cls, root_project, all_projects, project, project_name):
+    def load_project(
+            cls, root_project, all_projects, project, project_name, savepoint):
         return dbt.parser.load_and_parse_yml(
             package_name=project_name,
             root_project=root_project,
@@ -107,7 +114,8 @@ class SchemaTestLoader(ResourceLoader):
 class DataTestLoader(ResourceLoader):
 
     @classmethod
-    def load_project(cls, root_project, all_projects, project, project_name):
+    def load_project(
+            cls, root_project, all_projects, project, project_name, savepoint):
         return dbt.parser.load_and_parse_sql(
             package_name=project_name,
             root_project=root_project,
@@ -121,7 +129,8 @@ class DataTestLoader(ResourceLoader):
 class ArchiveLoader(ResourceLoader):
 
     @classmethod
-    def load_project(cls, root_project, all_projects, project, project_name):
+    def load_project(
+            cls, root_project, all_projects, project, project_name, savepoint):
         return dbt.parser.parse_archives_from_projects(root_project,
                                                        all_projects)
 
@@ -129,7 +138,8 @@ class ArchiveLoader(ResourceLoader):
 class RunHookLoader(ResourceLoader):
 
     @classmethod
-    def load_project(cls, root_project, all_projects, project, project_name):
+    def load_project(
+            cls, root_project, all_projects, project, project_name, savepoint):
         return dbt.parser.load_and_parse_run_hooks(root_project, all_projects)
 
 

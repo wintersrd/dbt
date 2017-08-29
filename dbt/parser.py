@@ -231,7 +231,8 @@ def parse_node(node, node_path, root_project_config, package_project_config,
     return node
 
 
-def parse_sql_nodes(nodes, root_project, projects, tags=None):
+def parse_sql_nodes(nodes, root_project, projects, tags=None,
+                    savepoint=None):
     if tags is None:
         tags = set()
 
@@ -246,7 +247,16 @@ def parse_sql_nodes(nodes, root_project, projects, tags=None):
                              package_name,
                              node.get('name'))
 
-        # TODO if this is set, raise a compiler error
+        if savepoint is not None:
+            saved_node = savepoint.get(node_path)
+
+            if(saved_node is not None and
+               (saved_node['file_last_modified'] == node['file_last_modified'])):
+                # TODO hash the file?
+                logger.debug("Using unmodified {}".format(node_path))
+                to_return[node_path] = savepoint[node_path]
+                continue
+
         to_return[node_path] = parse_node(node,
                                           node_path,
                                           root_project,
@@ -260,7 +270,8 @@ def parse_sql_nodes(nodes, root_project, projects, tags=None):
 
 
 def load_and_parse_sql(package_name, root_project, all_projects, root_dir,
-                       relative_dirs, resource_type, tags=None):
+                       relative_dirs, resource_type, tags=None,
+                       savepoint=None):
     extension = "[!.#~]*.sql"
 
     if tags is None:
@@ -301,11 +312,12 @@ def load_and_parse_sql(package_name, root_project, all_projects, root_dir,
             'resource_type': resource_type,
             'path': path,
             'original_file_path': original_file_path,
+            'file_last_modified': file_match.get('last_modified'),
             'package_name': package_name,
             'raw_sql': file_contents
         })
 
-    return parse_sql_nodes(result, root_project, all_projects, tags)
+    return parse_sql_nodes(result, root_project, all_projects, tags, savepoint)
 
 
 def get_hooks_from_project(project_cfg, hook_type):

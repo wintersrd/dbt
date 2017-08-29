@@ -46,14 +46,23 @@ def find_matching(root_path,
                         'searched_path': relative_path_to_search,
                         'absolute_path': absolute_path,
                         'relative_path': relative_path,
+                        'last_modified': int(os.path.getmtime(absolute_path)),
                     })
 
     return matching
 
 
-def load_file_contents(path, strip=True):
+def load_file_contents(path, strip=True, return_bytes=False):
+    if not os.path.exists(path):
+        return None
+
     with open(path, 'rb') as handle:
-        to_return = handle.read().decode('utf-8')
+        to_return = handle.read()
+
+        if return_bytes:
+            return to_return
+
+        to_return = to_return.decode('utf-8')
 
     if strip:
         to_return = to_return.strip()

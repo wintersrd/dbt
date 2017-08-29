@@ -12,6 +12,7 @@ from dbt.utils import get_materialization, NodeType, is_type
 
 from dbt.linker import Linker
 
+import dbt.clients.system
 import dbt.compat
 import dbt.context.runtime
 import dbt.contracts.graph.compiled
@@ -214,6 +215,36 @@ class Compiler(object):
 
         return injected_node
 
+    def read_parsed_file(self):
+        import pickle
+        filename = 'parsed.pickle'
+        path = os.path.join(self.project['target-path'], filename)
+
+        to_return = None
+
+        logger.debug("Reading parsed graph from {}...".format(path))
+
+        try:
+            with open(path, 'rb') as pickle_file:
+                to_return = pickle.load(pickle_file)
+        except BaseException as e:
+            logger.info(e)
+            pass
+
+        logger.debug("Done")
+
+        return to_return
+
+    def write_parsed_file(self, graph):
+        import pickle
+        filename = 'parsed.pickle'
+        path = os.path.join(self.project['target-path'], filename)
+
+        logger.debug("Writing parsed graph to {}...".format(path))
+        with open(path, 'wb') as pickle_file:
+            pickle.dump(graph['nodes'], pickle_file)
+        logger.debug("Done.")
+
     def write_graph_file(self, linker):
         filename = graph_file_name
         graph_path = os.path.join(self.project['target-path'], filename)
@@ -274,8 +305,12 @@ class Compiler(object):
         root_project = self.project.cfg
         all_projects = self.get_all_projects()
 
+        savepoint = self.read_parsed_file()
+
         flat_graph = dbt.loader.GraphLoader.load_all(
-            root_project, all_projects)
+            root_project, all_projects, savepoint)
+
+        self.write_parsed_file(flat_graph)
 
         flat_graph = dbt.parser.process_refs(flat_graph,
                                              root_project.get('name'))

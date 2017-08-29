@@ -71,7 +71,6 @@ class RunManager(object):
 
     def call_runner(self, data):
         runner = data['runner']
-        existing = data['existing']
         flat_graph = data['flat_graph']
 
         if runner.skip:
@@ -81,7 +80,7 @@ class RunManager(object):
         if not runner.is_ephemeral():
             runner.before_execute()
 
-        result = runner.safe_run(flat_graph, existing)
+        result = runner.safe_run(flat_graph)
 
         if not runner.is_ephemeral():
             runner.after_execute(result)
@@ -112,7 +111,6 @@ class RunManager(object):
         dbt.ui.printer.print_timestamped_line(concurrency_line)
         dbt.ui.printer.print_timestamped_line("")
 
-        existing = adapter.query_for_existing(profile, schema_name)
         node_runners = self.get_runners(Runner, adapter, node_dependency_list)
 
         pool = ThreadPool(num_threads)
@@ -123,7 +121,6 @@ class RunManager(object):
             args_list = []
             for runner in runners:
                 args_list.append({
-                    'existing': existing,
                     'flat_graph': flat_graph,
                     'runner': runner
                 })
