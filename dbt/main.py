@@ -375,6 +375,24 @@ def parse_args(args):
             fully-recalculate the incremental table from the model definition.
             """)
 
+        # TODO
+        operation_subs = sub.add_subparsers()
+        operation_sub = operation_subs.add_parser('operation', parents=[base_subparser])
+
+        operation_sub.add_argument(
+            'operation_name',
+            type=str,
+            help="""idk"""
+        )
+
+        operation_sub.add_argument(
+            '--args',
+            type=str,
+            nargs='+',
+            default=[],
+            help="""idk"""
+        )
+
     sub = subs.add_parser('seed', parents=[base_subparser])
     sub.add_argument(
         '--drop-existing',
