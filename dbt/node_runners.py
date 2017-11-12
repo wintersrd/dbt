@@ -466,8 +466,12 @@ class OperationRunner(ModelRunner):
         macro = operation['generator'](context)
         sql_res = macro(**arg_map)
         sql = dbt.compat.to_string(sql_res).strip()
-        _, cursor = self.adapter.execute_one(self.profile, sql, model_name=operation_name)
-        status = self.adapter.get_status(cursor)
+        print(sql)
+        if len(sql) > 0:
+            _, cursor = self.adapter.execute_one(self.profile, sql, model_name=operation_name)
+            status = self.adapter.get_status(cursor)
+        else:
+            status = 'OK'
 
         return RunModelResult(operation, status=status)
 

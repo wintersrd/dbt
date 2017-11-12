@@ -14,9 +14,6 @@ from dbt.task.base_task import RunnableTask
 class RunTask(RunnableTask):
     def operation_query(self):
         operation_name = self.args.operation_name
-
-        arg_map = {}
-
         if "." in operation_name:
             package, operation_name = operation_name.split(".", 1)
         else:
@@ -24,8 +21,7 @@ class RunTask(RunnableTask):
 
         return {
             "package": package,
-            "operation": operation_name,
-            "args": arg_map
+            "operation": operation_name
         }
 
 

@@ -379,6 +379,6 @@ def parse_cli_vars(var_list):
     for var in vars_split:
         if len(var) != 2:
             msg = "Invalid var '{}' -- expected key:value".format("".join(var))
-            raise raise_compiler_error(msg)
+            raise dbt.exceptions.raise_compiler_error(msg)
 
-    return {k:v for (k,v) in vars_split}
+    return {k.strip() : v.strip() for (k,v) in vars_split}
