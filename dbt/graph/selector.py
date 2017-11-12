@@ -267,8 +267,7 @@ class FlatNodeSelector(NodeSelector):
 class OperationSelector(NodeSelector):
     def select(self, query):
         package = query.get('package')
-        operation = query.get('operation')
-        args = query.get('args')
+        operation_name = query.get('operation')
 
         flat_graph = self.flat_graph
 
@@ -277,9 +276,9 @@ class OperationSelector(NodeSelector):
             macro_name = macro['name']
             macro_package = macro['package_name']
 
-            if macro_name == operation and macro_package == package:
-                # TODO : this should definitely not mutate the macro!
-                macro['args'] = args
+            if macro['resource_type'] == NodeType.Operation and \
+               macro_name == operation_name and \
+               macro_package == package:
                 return [[macro]]
 
         error = "Operation '{}' not found in package {}"

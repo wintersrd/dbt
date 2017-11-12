@@ -459,7 +459,7 @@ class ArchiveRunner(ModelRunner):
 class OperationRunner(ModelRunner):
     def execute(self, operation, existing, flat_graph):
         operation_name = operation['name']
-        arg_map = operation['args']
+        arg_map = {}
 
         context = dbt.context.runtime.generate(operation, self.project, flat_graph)
 
@@ -472,8 +472,7 @@ class OperationRunner(ModelRunner):
         return RunModelResult(operation, status=status)
 
     def describe_node(self):
-        args = ["{}:{}".format(k,v) for (k,v) in self.node['args'].items()]
-        return "{}({})".format(self.node.get("name"), ", ".join(args))
+        return self.node.get('name')
 
     def print_result_line(self, result):
         dbt.ui.printer.print_operation_result_line(result,

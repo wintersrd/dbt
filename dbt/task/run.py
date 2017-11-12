@@ -14,16 +14,8 @@ from dbt.task.base_task import RunnableTask
 class RunTask(RunnableTask):
     def operation_query(self):
         operation_name = self.args.operation_name
-        operation_args = self.args.args
 
-        args_split = [arg.split(":", 1) for arg in operation_args]
-
-        for arg in args_split:
-            if len(arg) != 2:
-                msg = "Invalid argument '{}' -- expected key:value".format("".join(arg))
-                raise raise_compiler_error(msg)
-
-        arg_map = {k:v for (k,v) in args_split}
+        arg_map = {}
 
         if "." in operation_name:
             package, operation_name = operation_name.split(".", 1)
