@@ -32,7 +32,7 @@
 
         insert into {{ schema }}.{{ identifier }} ({{ dest_cols_csv }}) (
           select {{ dest_cols_csv }}
-          from "{{ tmp_identifier }}"
+          from {{ tmp_identifier }}
         );
       {%- else -%}
         {{ create_table_as(False, identifier, sql) }}

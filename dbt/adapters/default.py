@@ -1,5 +1,4 @@
 import copy
-import itertools
 import multiprocessing
 import time
 import agate
@@ -35,6 +34,7 @@ class DefaultAdapter(object):
         "add_query",
         "expand_target_column_types",
         "quote_schema_and_table",
+        "get_schema_and_table",
         "execute"
     ]
 
@@ -140,7 +140,7 @@ class DefaultAdapter(object):
 
     @classmethod
     def drop_relation(cls, profile, schema, rel_name, rel_type, model_name):
-        relation = cls.quote_schema_and_table(profile, schema, rel_name)
+        relation = cls.get_schema_and_table(profile, schema, rel_name)
         sql = 'drop {} if exists {} cascade'.format(rel_type, relation)
 
         connection, cursor = cls.add_query(profile, sql, model_name)
@@ -155,16 +155,15 @@ class DefaultAdapter(object):
 
     @classmethod
     def truncate(cls, profile, schema, table, model_name=None):
-        relation = cls.quote_schema_and_table(profile, schema, table)
+        relation = cls.get_schema_and_table(profile, schema, table)
         sql = 'truncate table {}'.format(relation)
 
         connection, cursor = cls.add_query(profile, sql, model_name)
 
     @classmethod
     def rename(cls, profile, schema, from_name, to_name, model_name=None):
-        from_relation = cls.quote_schema_and_table(profile, schema, from_name)
-        to_relation = cls.quote(to_name)
-        sql = 'alter table {} rename to {}'.format(from_relation, to_relation)
+        from_relation = cls.get_schema_and_table(profile, schema, from_name)
+        sql = 'alter table {} rename to {}'.format(from_relation, to_name)
 
         connection, cursor = cls.add_query(profile, sql, model_name)
 
@@ -196,11 +195,11 @@ class DefaultAdapter(object):
         sql = """
         select column_name, data_type, character_maximum_length
         from information_schema.columns
-        where table_name = '{table_name}'
+        where table_name ilike '{table_name}'
         """.format(table_name=table_name).strip()
 
         if schema_name is not None:
-            sql += (" AND table_schema = '{schema_name}'"
+            sql += (" AND table_schema ilike '{schema_name}'"
                     .format(schema_name=schema_name))
 
         return sql
@@ -261,12 +260,12 @@ class DefaultAdapter(object):
     ###
     @classmethod
     def get_create_schema_sql(cls, schema):
-        return ('create schema if not exists "{schema}"'
+        return ('create schema if not exists {schema}'
                 .format(schema=schema))
 
     @classmethod
     def get_drop_schema_sql(cls, schema):
-        return ('drop schema if exists "{schema} cascade"'
+        return ('drop schema if exists {schema} cascade'
                 .format(schema=schema))
 
     ###
@@ -631,6 +630,15 @@ class DefaultAdapter(object):
     def quote_schema_and_table(cls, profile, schema, table, model_name=None):
         return '{}.{}'.format(cls.quote(schema),
                               cls.quote(table))
+
+    @classmethod
+    def get_schema_and_table(cls, profile, schema, table, quote=False,
+                             model_name=None):
+        if quote:
+            return cls.quote_schema_and_table(profile, schema, table,
+                                              model_name)
+        else:
+            return '{}.{}'.format(schema, table)
 
     @classmethod
     def handle_csv_table(cls, profile, schema, table_name, agate_table,

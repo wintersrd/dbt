@@ -107,12 +107,13 @@ class SnowflakeAdapter(PostgresAdapter):
         if not isinstance(schemas, (list, tuple)):
             schemas = [schemas]
 
-        schema_list = ",".join(["'{}'".format(schema) for schema in schemas])
+        schemas_upper = ["'{}'".format(schema.upper()) for schema in schemas]
+        schema_list = ",".join(schemas_upper)
 
         sql = """
-        select TABLE_NAME as name, TABLE_TYPE as type
-        from INFORMATION_SCHEMA.TABLES
-        where TABLE_SCHEMA in ({schema_list})
+        select table_name as name, table_type as type
+        from information_schema.tables
+        where upper(table_schema) in ({schema_list})
         """.format(schema_list=schema_list).strip()  # noqa
 
         _, cursor = cls.add_query(profile, sql, model_name, auto_begin=False)
@@ -130,8 +131,8 @@ class SnowflakeAdapter(PostgresAdapter):
 
     @classmethod
     def rename(cls, profile, schema, from_name, to_name, model_name=None):
-        sql = (('alter table "{schema}"."{from_name}" '
-                'rename to "{schema}"."{to_name}"')
+        sql = (('alter table {schema}.{from_name} '
+                'rename to {schema}.{to_name}')
                .format(schema=schema,
                        from_name=from_name,
                        to_name=to_name))
@@ -155,7 +156,7 @@ class SnowflakeAdapter(PostgresAdapter):
 
     @classmethod
     def get_existing_schemas(cls, profile, model_name=None):
-        sql = "select distinct SCHEMA_NAME from INFORMATION_SCHEMA.SCHEMATA"
+        sql = "select distinct schema_name from information_schema.schemata"
 
         connection, cursor = cls.add_query(profile, sql, model_name,
                                            select_schema=False,
@@ -168,9 +169,9 @@ class SnowflakeAdapter(PostgresAdapter):
     def check_schema_exists(cls, profile, schema, model_name=None):
         sql = """
         select count(*)
-        from INFORMATION_SCHEMA.SCHEMATA
-        where SCHEMA_NAME = '{schema}'
-        """.format(schema=schema).strip()  # noqa
+        from information_schema.schemata
+        where upper(schema_name) = '{schema}'
+        """.format(schema=schema.upper()).strip()  # noqa
 
         connection, cursor = cls.add_query(profile, sql, model_name,
                                            select_schema=False,

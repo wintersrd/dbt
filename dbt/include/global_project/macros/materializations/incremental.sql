@@ -4,10 +4,10 @@
   {%- set identifier = model['name'] -%}
 
   delete
-  from "{{ schema }}"."{{ identifier }}"
+  from {{ schema }}.{{ identifier }}
   where ({{ unique_key }}) in (
     select ({{ unique_key }})
-    from "{{ identifier }}__dbt_incremental_tmp"
+    from {{ identifier }}__dbt_incremental_tmp
   );
 
 {%- endmacro %}
@@ -78,10 +78,10 @@
 
        {%- endif %}
 
-       insert into "{{ schema }}"."{{ identifier }}" ({{ dest_cols_csv }})
+       insert into {{ schema }}.{{ identifier }} ({{ dest_cols_csv }})
        (
          select {{ dest_cols_csv }}
-         from "{{ identifier }}__dbt_incremental_tmp"
+         from {{ identifier }}__dbt_incremental_tmp
        );
      {% endcall %}
   {%- endif %}

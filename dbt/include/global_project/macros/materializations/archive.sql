@@ -1,6 +1,6 @@
 {% macro archive_select(source_schema, source_table, target_schema, target_table, unique_key, updated_at) %}
 
-    with "current_data" as (
+    with current_data as (
 
         select
             {% for col in adapter.get_columns_in_table(source_schema, source_table) %}
@@ -10,7 +10,7 @@
             {{ unique_key }} as "dbt_pk",
             {{ updated_at }} as "valid_from",
             null::timestamp as "tmp_valid_to"
-        from "{{ source_schema }}"."{{ source_table }}"
+        from {{ source_schema }}.{{ source_table }}
 
     ),
 
@@ -24,7 +24,7 @@
             {{ unique_key }} as "dbt_pk",
             "valid_from",
             "valid_to" as "tmp_valid_to"
-        from "{{ target_schema }}"."{{ target_table }}"
+        from {{ target_schema }}.{{ target_table }}
 
     ),
 
@@ -104,7 +104,7 @@
 
   {% for col in missing_columns %}
     {% call statement() %}
-      alter table "{{ target_schema }}"."{{ target_table }}" add column "{{ col.name }}" {{ col.data_type }};
+      alter table {{ target_schema }}.{{ target_table }} add column "{{ col.name }}" {{ col.data_type }};
     {% endcall %}
   {% endfor %}
 
@@ -130,15 +130,15 @@
                                         to_table=target_table) }}
 
   {% call statement('main') -%}
-    update "{{ target_schema }}"."{{ identifier }}" set "valid_to" = "tmp"."valid_to"
-    from "{{ tmp_identifier }}" as "tmp"
-    where "tmp"."scd_id" = "{{ target_schema }}"."{{ identifier }}"."scd_id"
+    update {{ target_schema }}.{{ identifier }} set "valid_to" = "tmp"."valid_to"
+    from {{ tmp_identifier }} as "tmp"
+    where "tmp"."scd_id" = {{ target_schema }}.{{ identifier }}."scd_id"
       and "change_type" = 'update';
 
-    insert into "{{ target_schema }}"."{{ identifier }}" (
+    insert into {{ target_schema }}.{{ identifier }} (
       {{ column_list(dest_columns) }}
     )
-    select {{ column_list(dest_columns) }} from "{{ tmp_identifier }}"
+    select {{ column_list(dest_columns) }} from {{ tmp_identifier }}
     where "change_type" = 'insert';
   {% endcall %}
 
