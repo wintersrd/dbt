@@ -224,7 +224,7 @@ class PostgresAdapter(dbt.adapters.default.DefaultAdapter):
                 ", ".join("%s" for _ in agate_table.column_names)))
 
         sql = ('insert into {} ({}) values {}'
-               .format(cls.get_schema_and_table(schema, table_name),
+               .format(cls.get_schema_and_table(profile, schema, table_name),
                        cols_sql,
                        ",\n".join(placeholders)))
 
