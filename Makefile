@@ -20,4 +20,4 @@ test-integration:
 
 test-quick:
 	@echo "Integration test run starting..."
-	@time docker-compose run test tox -e integration-postgres-py27,unit-py27 -- -x
+	@time docker-compose run test tox -e integration-snowflake-py27 -- -x
