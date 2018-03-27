@@ -8,3 +8,14 @@
     {{ sql }}
   );
 {% endmacro %}
+
+
+{% macro snowflake__get_existing_relation_type(existing, identifier) -%}
+  {%- set upcased_existing = {} -%}
+  {%- for k,v in existing.items() -%}
+    {%- set _ = upcased_existing.update({k.upper(): v}) -%}
+  {%- endfor -%}
+
+  {%- set existing_type = upcased_existing.get(identifier.upper()) -%}
+  {{ return(existing_type) }}
+{%- endmacro %}

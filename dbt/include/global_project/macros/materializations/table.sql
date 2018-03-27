@@ -3,7 +3,7 @@
   {%- set tmp_identifier = identifier + '__dbt_tmp' -%}
   {%- set non_destructive_mode = (flags.NON_DESTRUCTIVE == True) -%}
   {%- set existing = adapter.query_for_existing(schema) -%}
-  {%- set existing_type = existing.get(identifier) -%}
+  {%- set existing_type = get_existing_relation_type(existing, identifier) -%}
 
   {{ drop_if_exists(existing, schema, tmp_identifier) }}
 

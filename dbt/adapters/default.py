@@ -610,10 +610,14 @@ class DefaultAdapter(object):
         return cls.add_query(profile, sql, model_name)
 
     @classmethod
-    def table_exists(cls, profile, schema, table, model_name=None):
+    def table_existing_type(cls, profile, schema, table, model_name=None):
         tables = cls.query_for_existing(profile, schema, model_name)
-        exists = tables.get(table) is not None
-        return exists
+        return tables.get(table)
+
+    @classmethod
+    def table_exists(cls, profile, schema, table, model_name=None):
+        rel_type = cls.table_existing_type(profile, schema, table, model_name)
+        return rel_type is not None
 
     @classmethod
     def already_exists(cls, profile, schema, table, model_name=None):
@@ -644,7 +648,8 @@ class DefaultAdapter(object):
     def handle_csv_table(cls, profile, schema, table_name, agate_table,
                          full_refresh=False):
         existing = cls.query_for_existing(profile, schema)
-        existing_type = existing.get(table_name)
+        upcased_existing = {k.upper(): v for k, v in existing.items()}
+        existing_type = upcased_existing.get(table_name.upper())
         if existing_type and existing_type != "table":
             raise dbt.exceptions.RuntimeException(
                 "Cannot seed to '{}', it is a view".format(table_name))
