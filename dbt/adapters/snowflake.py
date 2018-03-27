@@ -107,11 +107,13 @@ class SnowflakeAdapter(PostgresAdapter):
         if not isinstance(schemas, (list, tuple)):
             schemas = [schemas]
 
-        schemas_upper = ["'{}'".format(schema.upper()) for schema in schemas]
-        schema_list = ",".join(schemas_upper)
+        schemas = ["upper('{}')".format(schema) for schema in schemas]
+        schema_list = ",".join(schemas)
 
+        # TODO: This lower() is a bad idea...
+        # Instead, we should wrap table names in a class
         sql = """
-        select table_name as name, table_type as type
+        select lower(table_name) as name, table_type as type
         from information_schema.tables
         where upper(table_schema) in ({schema_list})
         """.format(schema_list=schema_list).strip()  # noqa
@@ -170,8 +172,8 @@ class SnowflakeAdapter(PostgresAdapter):
         sql = """
         select count(*)
         from information_schema.schemata
-        where upper(schema_name) = '{schema}'
-        """.format(schema=schema.upper()).strip()  # noqa
+        where upper(schema_name) = upper('{schema}')
+        """.format(schema=schema).strip()  # noqa
 
         connection, cursor = cls.add_query(profile, sql, model_name,
                                            select_schema=False,
