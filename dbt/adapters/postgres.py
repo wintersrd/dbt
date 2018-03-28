@@ -199,7 +199,7 @@ class PostgresAdapter(dbt.adapters.default.DefaultAdapter):
             type_ = cls.convert_agate_type(agate_table, idx)
             col_sqls.append('{} {}'.format(col_name, type_))
 
-        relation = cls.get_schema_and_table(profile, schema, table_name)
+        relation = cls.render_relation(profile, schema, table_name)
         sql = 'create table {} ({})'.format(relation, ", ".join(col_sqls))
         return cls.add_query(profile, sql)
 
@@ -224,7 +224,7 @@ class PostgresAdapter(dbt.adapters.default.DefaultAdapter):
                 ", ".join("%s" for _ in agate_table.column_names)))
 
         sql = ('insert into {} ({}) values {}'
-               .format(cls.get_schema_and_table(profile, schema, table_name),
+               .format(cls.render_relation(profile, schema, table_name),
                        cols_sql,
                        ",\n".join(placeholders)))
 

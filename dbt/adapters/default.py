@@ -34,7 +34,6 @@ class DefaultAdapter(object):
         "add_query",
         "expand_target_column_types",
         "quote_schema_and_table",
-        "get_schema_and_table",
         "execute"
     ]
 
@@ -140,7 +139,7 @@ class DefaultAdapter(object):
 
     @classmethod
     def drop_relation(cls, profile, schema, rel_name, rel_type, model_name):
-        relation = cls.get_schema_and_table(profile, schema, rel_name)
+        relation = cls.render_relation(profile, schema, rel_name)
         sql = 'drop {} if exists {} cascade'.format(rel_type, relation)
 
         connection, cursor = cls.add_query(profile, sql, model_name)
@@ -155,14 +154,14 @@ class DefaultAdapter(object):
 
     @classmethod
     def truncate(cls, profile, schema, table, model_name=None):
-        relation = cls.get_schema_and_table(profile, schema, table)
+        relation = cls.render_relation(profile, schema, table)
         sql = 'truncate table {}'.format(relation)
 
         connection, cursor = cls.add_query(profile, sql, model_name)
 
     @classmethod
     def rename(cls, profile, schema, from_name, to_name, model_name=None):
-        from_relation = cls.get_schema_and_table(profile, schema, from_name)
+        from_relation = cls.render_relation(profile, schema, from_name)
         sql = 'alter table {} rename to {}'.format(from_relation, to_name)
 
         connection, cursor = cls.add_query(profile, sql, model_name)
@@ -636,13 +635,8 @@ class DefaultAdapter(object):
                               cls.quote(table))
 
     @classmethod
-    def get_schema_and_table(cls, profile, schema, table, quote=False,
-                             model_name=None):
-        if quote:
-            return cls.quote_schema_and_table(profile, schema, table,
-                                              model_name)
-        else:
-            return '{}.{}'.format(schema, table)
+    def render_relation(cls, profile, schema, name):
+        return '{}.{}'.format(schema, name)
 
     @classmethod
     def handle_csv_table(cls, profile, schema, table_name, agate_table,
