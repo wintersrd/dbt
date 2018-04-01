@@ -19,6 +19,69 @@ connections_in_use = {}
 connections_available = []
 
 
+class DefaultRelation(object):
+    @classmethod
+    def create_from_node(cls, profile, adapter, node):
+        pass
+
+    @classmethod
+    def create_from_parts(cls, database=None, schema=None, identifier=None):
+        return cls(database=database, schema=schema, identifier=identifier)
+
+    @classmethod
+    def quote_identifier(cls, identifier):
+        return '"{}"'.format(identifier)
+
+    def quote(self, database=None, schema=None, identifier=None):
+        new = copy.deepcopy(self)
+
+        if database is not None:
+            new.should_quote_database = database
+
+        if schema is not None:
+            new.should_quote_schema = schema
+
+        if identifier is not None:
+            new.should_quote_identifier = identifier
+
+        return new
+
+    def render(self):
+        parts = []
+
+        if database is not None and self.include_database:
+            parts.append(self.quote_if(database, self.should_quote_database))
+
+        if schema is not None and self.include_schema:
+            parts.append(self.quote_if(schema, self.should_quote_schema))
+
+        parts.append(self.quote_if(identifier, self.should_quote_identifier))
+
+        return '.'.join(parts)
+
+    # private
+    @classmethod
+    def quote_if(cls, identifier, should_quote):
+        if should_quote:
+            return cls.quote(identifier)
+
+        return identifier
+
+    def __init__(self, database=None, schema=None, identifier=None, node=None,
+                 **kwargs):
+        self.database = database
+        self.schema = schema
+        self.identifier = identifier
+
+        self.should_quote_database = False
+        self.should_quote_schema = False
+        self.should_quote_identifier = False
+
+        self.include_database = False
+        self.include_schema = True
+
+
+
 class DefaultAdapter(object):
 
     requires = {}
