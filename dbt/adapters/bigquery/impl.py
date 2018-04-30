@@ -354,6 +354,11 @@ class BigQueryAdapter(PostgresAdapter):
         if fetch:
             res = list(iterator)
 
+        import re
+        small_query = re.sub('\s+', ' ', sql.replace("\n", " ")).strip()[:64]
+        cost = (query_job.total_bytes_billed / (1e12 * 1.0)) * 5
+        print("Query <{}>, Cost = ${:,.4f}".format(small_query, cost))
+
         # If we get here, the query succeeded
         status = 'OK'
         return status, cls.get_table_from_response(res)
