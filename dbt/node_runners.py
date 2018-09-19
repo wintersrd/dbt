@@ -205,11 +205,27 @@ class CompileRunner(BaseRunner):
             logger.debug('Writing injected SQL for node "{}"'.format(
                 node.unique_id))
 
+            context = dbt.context.runtime.generate(
+                node, project.cfg, manifest)
+
+            context['just_compile'] = True
+
+            materialization_macro = manifest.get_materialization_macro(
+                node.get_materialization(),
+                adapter.type())
+
+            if materialization_macro is None:
+                dbt.exceptions.missing_materialization(
+                    node,
+                    adapter.type())
+
+            materialization_macro.generator(context)()
+
             written_path = dbt.writer.write_node(
                 node,
                 project.get('target-path'),
                 'compiled',
-                node.injected_sql)
+                "\n\n".join(context['model']['sql_statements']))
 
             node.build_path = written_path
 

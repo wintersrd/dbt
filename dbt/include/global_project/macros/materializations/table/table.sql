@@ -24,15 +24,21 @@
 
 
   -- drop the temp relations if they exists for some reason
-  {{ adapter.drop_relation(intermediate_relation) }}
-  {{ adapter.drop_relation(backup_relation) }}
+    {% call statement('drop_existing') %}
+        drop table if exists {{ intermediate_relation }};
+        drop table if exists {{ backup_relation }};
+    {% endcall %}
 
   -- setup: if the target relation already exists, truncate or drop it (if it's a view)
   {% if non_destructive_mode -%}
     {% if exists_as_table -%}
-      {{ adapter.truncate_relation(old_relation) }}
+        {% call statement('truncate existing') %}
+            truncate table {{ old_relation }};
+        {% endcall %}
     {% elif exists_as_view -%}
-      {{ adapter.drop_relation(old_relation) }}
+        {% call statement('drop view') %}
+            drop table {{ old_relation }};
+        {% endcall %}
       {%- set old_relation = none -%}
     {%- endif %}
   {%- endif %}
@@ -68,19 +74,27 @@
     -- noop
   {%- else -%}
     {% if old_relation is not none %}
-        {{ adapter.rename_relation(target_relation, backup_relation) }}
+        {% call statement('rename to backup') %}
+            alter table {{ target_relation }} rename to {{ backup_relation }};
+        {% endcall %}
     {% endif %}
 
-    {{ adapter.rename_relation(intermediate_relation, target_relation) }}
+        {% call statement('rename to new') %}
+            alter table {{ intermediate_relation }} rename to {{ target_relation }};
+        {% endcall %}
   {%- endif %}
 
   {{ run_hooks(post_hooks, inside_transaction=True) }}
 
   -- `COMMIT` happens here
-  {{ adapter.commit() }}
+        {% call statement('commit') %}
+            commit;
+        {% endcall %}
 
   -- finally, drop the existing/backup relation after the commit
-  {{ drop_relation_if_exists(backup_relation) }}
+        {% call statement('drop backup') %}
+        drop relation if exists {{ backup_relation }};
+        {% endcall %}
 
   {{ run_hooks(post_hooks, inside_transaction=False) }}
 {% endmaterialization %}

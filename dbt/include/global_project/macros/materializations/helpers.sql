@@ -5,7 +5,7 @@
         commit;
       {% endcall %}
     {% endif %}
-    {% call statement(auto_begin=inside_transaction) %}
+    {% call statement("hook: " ~ loop.index, auto_begin=inside_transaction) %}
       {{ hook.get('sql') }}
     {% endcall %}
   {% endfor %}

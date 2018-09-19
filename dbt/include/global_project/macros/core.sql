@@ -1,16 +1,16 @@
 {% macro statement(name=None, fetch_result=False, auto_begin=True) -%}
+
   {%- if execute: -%}
     {%- set sql = render(caller()) -%}
 
-    {%- if name == 'main' -%}
-      {{ log('Writing runtime SQL for node "{}"'.format(model['unique_id'])) }}
-      {{ write(sql) }}
-    {%- endif -%}
+      {{ update_sql(name, sql) }}
 
-    {%- set status, res = adapter.execute(sql, auto_begin=auto_begin, fetch=fetch_result) -%}
-    {%- if name is not none -%}
-      {{ store_result(name, status=status, agate_table=res) }}
-    {%- endif -%}
+    {% if not just_compile %}
+        {%- set status, res = adapter.execute(sql, auto_begin=auto_begin, fetch=fetch_result) -%}
+        {%- if name is not none -%}
+          {{ store_result(name, status=status, agate_table=res) }}
+        {%- endif -%}
+    {% endif %}
 
   {%- endif -%}
 {%- endmacro %}

@@ -268,6 +268,16 @@ def write(node, target_path, subdirectory):
 
     return fn
 
+def update_sql(node, target_path, subdirectory):
+    def fn(name, payload):
+        rendered = "-- {}\n{}".format(name, payload)
+        if 'sql_statements' not in node:
+            node['sql_statements'] = []
+        node['sql_statements'].append(rendered)
+        return ''
+
+    return fn
+
 
 def render(context, node):
     def fn(string):
@@ -429,6 +439,7 @@ def modify_generated_context(context, model, model_dict, project_cfg,
     context = _add_macros(context, model, manifest)
 
     context["write"] = write(model_dict, project_cfg.get('target-path'), 'run')
+    context["update_sql"] = update_sql(model_dict, project_cfg.get('target-path'), 'run')
     context["render"] = render(context, model_dict)
     context["var"] = Var(model, context=context, overrides=cli_var_overrides)
     context['context'] = context
