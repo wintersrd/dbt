@@ -353,20 +353,15 @@ class DefaultAdapter(object):
     ###
     # RELATIONS
     ###
-    def _schema_is_cached(self, schema, model_name=None,
-                          debug_on_missing=True):
-        """Check if the schema is cached, and by default logs if it is not."""
+    def _schema_is_cached(self, schema, model_name=None):
+        """Check if the schema is cached, and if not cache the schema."""
         if dbt.flags.USE_CACHE is False:
             return False
-        elif schema not in self.cache:
-            if debug_on_missing:
-                logger.debug(
-                    'On "{}": cache miss for schema "{}", this is inefficient'
-                    .format(model_name or '<None>', schema)
-                )
-            return False
-        else:
-            return True
+
+        if schema not in self.cache:
+            self._relations_cache_for_schemas([schema])
+
+        return True
 
     def _list_relations(self, schema, model_name=None):
         raise dbt.exceptions.NotImplementedException(
@@ -849,19 +844,16 @@ class DefaultAdapter(object):
     def _relations_filter_table(cls, table, schemas):
         return table.where(_relations_filter_schemas(schemas))
 
-    def _link_cached_relations(self, manifest, schemas):
+    def _link_cached_relations(self, schemas):
         """This method has to exist because BigQueryAdapter and SnowflakeAdapter
         inherit from the PostgresAdapter, so they need something to override
         in order to disable linking.
         """
         pass
 
-    def _relations_cache_for_schemas(self, manifest, schemas=None):
+    def _relations_cache_for_schemas(self, schemas):
         if not dbt.flags.USE_CACHE:
             return
-
-        if schemas is None:
-            schemas = manifest.get_used_schemas()
 
         relations = []
         # add all relations
@@ -869,7 +861,7 @@ class DefaultAdapter(object):
             # bypass the cache, of course!
             for relation in self._list_relations(schema):
                 self.cache.add(relation)
-        self._link_cached_relations(manifest, schemas)
+        self._link_cached_relations(schemas)
         # it's possible that there were no relations in some schemas. We want
         # to insert the schemas we query into the cache's `.schemas` attribute
         # so we can check it later
@@ -882,7 +874,13 @@ class DefaultAdapter(object):
         if not dbt.flags.USE_CACHE:
             return
 
+        schemas = manifest.get_used_schemas()
+
         with self.cache.lock:
             if clear:
                 self.cache.clear()
-            self._relations_cache_for_schemas(manifest)
+            else:
+                # only add new schemas, no need to query for existing
+                schemas.difference(self.cache.schemas)
+
+            self._relations_cache_for_schemas(schemas)

@@ -180,7 +180,7 @@ class BigQueryAdapter(PostgresAdapter):
 
         return connection
 
-    def _link_cached_relations(self, manifest, schemas):
+    def _link_cached_relations(self, schemas):
         pass
 
     def _list_relations(self, schema, model_name=None):
