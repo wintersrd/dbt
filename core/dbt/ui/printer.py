@@ -13,11 +13,16 @@ COLOR_FG_GREEN = dbt.ui.colors.COLORS['green']
 COLOR_FG_YELLOW = dbt.ui.colors.COLORS['yellow']
 COLOR_RESET_ALL = dbt.ui.colors.COLORS['reset_all']
 
+PRINTER_WIDTH = 80
+
 
 def use_colors():
     global USE_COLORS
     USE_COLORS = True
 
+def printer_width(printer_width):
+    global PRINTER_WIDTH
+    PRINTER_WIDTH = printer_width
 
 def get_timestamp():
     return time.strftime("%H:%M:%S")
@@ -59,7 +64,7 @@ def print_fancy_output_line(msg, status, index, total, execution_time=None):
         progress=progress,
         message=msg)
 
-    justified = prefix.ljust(80, ".")
+    justified = prefix.ljust(PRINTER_WIDTH, ".")
 
     if execution_time is None:
         status_time = ""
