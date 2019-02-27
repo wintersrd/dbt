@@ -48,7 +48,7 @@
                     data_type as "column_type",
                     null as "column_comment"
 
-                from {{ adapter.quote_as_configured(database, "database") }}.information_schema.columns
+                from {{ information_schema_name(database) }}.columns
 
             )
 
@@ -56,7 +56,6 @@
             from tables
             join columns using ("table_database", "table_schema", "table_name")
             where "table_schema" != 'INFORMATION_SCHEMA'
-              and "table_database" = {{ adapter.quote_as_configured(database, "database").replace('"', "'") }}
             order by "column_index"
         )
         {% if not loop.last %} union all {% endif %}

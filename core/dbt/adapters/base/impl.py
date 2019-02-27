@@ -18,6 +18,7 @@ from dbt.loader import GraphLoader
 from dbt.logger import GLOBAL_LOGGER as logger
 from dbt.schema import Column
 from dbt.utils import filter_null_values, translate_aliases
+from dbt.node_types import NodeType
 
 from dbt.adapters.base.meta import AdapterMeta, available, available_raw, \
     available_deprecated
@@ -781,13 +782,38 @@ class BaseAdapter(object):
         Returns an agate.Table of catalog information.
         """
         # make it a list so macros can index into it.
-        context = {'databases': list(manifest.get_used_databases())}
+        context = {
+            'databases': list(manifest.get_used_databases()),
+            'information_schema': self.get_information_schema_mapping(manifest)
+        }
+
         table = self.execute_macro(GET_CATALOG_MACRO_NAME,
                                    context_override=context,
                                    release=True)
 
         results = self._catalog_filter_table(table, manifest)
         return results
+
+    @available
+    def get_information_schema_mapping(self, manifest, model_name=None):
+        information_schema = {}
+
+        for node in manifest.nodes.values():
+            if node.resource_type == NodeType.Source:
+                relation = self.Relation.create_from_source(node)
+            else:
+                relation = self.Relation.create_from_node(self.config, node)
+
+            quote_db = relation.should_quote('database')
+            information_schema_rel = self.Relation.create(
+                database=relation.database,
+                schema='information_schema',
+                identifier='__phony__',
+            ).include(identifier=False).quote(database=quote_db, schema=False)
+
+            information_schema[relation.database.lower()] = information_schema_rel
+
+        return information_schema
 
     def cancel_open_connections(self):
         """Cancel all open connections."""

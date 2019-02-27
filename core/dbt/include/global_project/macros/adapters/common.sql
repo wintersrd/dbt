@@ -178,7 +178,16 @@
 
 {% macro default__information_schema_name(database) -%}
   {%- if database -%}
-    {{ adapter.quote_as_configured(database, 'database') }}.information_schema
+    {%- if database.lower() in information_schema -%}
+        {{ information_schema[database.lower()] }}
+    {%- else -%}
+        {%- set warning -%}
+            Tried to access a nonexistent information schema for db={{database.lower()}}
+            Known schemas: {{ information_schema }}
+        {%- endset -%}
+        {% do log(warning) %}
+        information_schema
+    {%- endif -%}
   {%- else -%}
     information_schema
   {%- endif -%}
