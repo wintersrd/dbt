@@ -8,6 +8,7 @@ from dbt.exceptions import ValidationException
 from dbt.node_types import NodeType
 from dbt.logger import GLOBAL_LOGGER as logger
 from dbt import tracking
+from collections import defaultdict
 import dbt.utils
 
 # We allow either parsed or compiled nodes, or parsed sources, as some
@@ -408,4 +409,13 @@ class Manifest(APIObject):
         })
 
     def get_used_databases(self):
-        return frozenset(node.database for node in self.nodes.values())
+        databases = frozenset(node.database for node in self.nodes.values())
+
+        database_counter = defaultdict(int)
+        for database in databases:
+            key = database.lower()
+            database_counter[key] += 1
+            if database_counter[key] > 1:
+                raise RuntimeError("not unique db name TODO TODO")
+        return databases
+
