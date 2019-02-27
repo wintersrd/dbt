@@ -179,9 +179,9 @@ class BaseRelation(APIObject):
             schema=source.schema,
             identifier=source.identifier,
             quote_policy={
-                'database': True,
-                'schema': True,
-                'identifier': True,
+                'database': source.quoting['database'],
+                'schema': source.quoting['schema'],
+                'identifier': source.quoting['identifier'],
             },
             **kwargs
         )

@@ -12,6 +12,7 @@ import dbt.clients.yaml_helper
 import dbt.context.parser
 import dbt.contracts.project
 
+from dbt.adapters.factory import get_adapter
 from dbt.clients.jinja import get_rendered
 from dbt.node_types import NodeType
 from dbt.compat import basestring, to_string, to_native_string
@@ -257,6 +258,7 @@ class SchemaBaseTestParser(MacrosKnownParser):
 
         source_package = self.all_projects.get(package_name)
         if source_package is None:
+            # TODO : model_name is not defined here...
             desc = '"{}" test on model "{}"'.format(test_type,
                                                     model_name)
             dbt.exceptions.raise_dep_not_found(None, desc, test_namespace)
@@ -366,6 +368,9 @@ class SchemaSourceParser(SchemaBaseTestParser):
         )
         self._renderer = ConfigRenderer(self.root_project_config.cli_vars)
 
+        adapter = get_adapter(self.root_project_config)
+        self.quote_character = adapter.Relation.DEFAULTS['quote_character']
+
     def _build_raw_sql(self, test_namespace, target, test_type, test_args):
         return build_source_test_raw_sql(test_namespace, target['source'],
                                          target['table'], test_type,
@@ -381,8 +386,16 @@ class SchemaSourceParser(SchemaBaseTestParser):
     def get_path(self, *parts):
         return '.'.join(str(s) for s in parts)
 
+    def _parse_identifier(self, identifier):
+        if identifier.startswith(self.quote_character) and \
+           identifier.endswith(self.quote_character):
+            return True, identifier[1:-1]
+        else:
+            return False, identifier
+
     def generate_source_node(self, source, table, path, package_name, root_dir,
                              refs):
+
         unique_id = self.get_path(NodeType.Source, package_name,
                                   source.name, table.name)
 
@@ -398,12 +411,26 @@ class SchemaSourceParser(SchemaBaseTestParser):
 
         loaded_at_field = table.get('loaded_at_field',
                                     source.get('loaded_at_field'))
+
         default_database = self.root_project_config.credentials.database
+
+        quote_database, parsed_database = self._parse_identifier(
+                source.get('database', default_database))
+        quote_schema, parsed_schema = self._parse_identifier(
+                source.get('schema', source.name))
+        quote_identifier, parsed_identifier = self._parse_identifier(
+                table.get('identifier', table.name))
+
         return ParsedSourceDefinition(
             package_name=package_name,
-            database=source.get('database', default_database),
-            schema=source.get('schema', source.name),
-            identifier=table.get('identifier', table.name),
+            database=parsed_database,
+            schema=parsed_schema,
+            identifier=parsed_identifier,
+            quoting={
+                "database": quote_database,
+                "schema": quote_schema,
+                "identifier": quote_identifier
+            },
             root_path=root_dir,
             path=path,
             original_file_path=path,

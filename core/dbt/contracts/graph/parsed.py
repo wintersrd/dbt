@@ -676,12 +676,17 @@ PARSED_SOURCE_DEFINITION_CONTRACT = deep_merge(
             # the manifest search stuff really requires this, sadly
             'resource_type': {
                 'enum': [NodeType.Source],
+            },
+            'quoting': {
+                'database': {'type': 'boolean'},
+                'schema': {'type': 'boolean'},
+                'identifier': {'type': 'boolean'},
             }
         },
         # note that while required, loaded_at_field and freshness may be null
         'required': [
             'source_name', 'source_description', 'loaded_at_field', 'loader',
-            'freshness', 'description', 'columns', 'docrefs', 'identifier',
+            'freshness', 'description', 'columns', 'docrefs', 'identifier', 'quoting'
         ],
     }
 )
