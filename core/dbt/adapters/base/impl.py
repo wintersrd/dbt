@@ -797,6 +797,7 @@ class BaseAdapter(object):
     @available
     def get_information_schema_mapping(self, manifest, model_name=None):
         information_schema = {}
+        dupe_mapping = {}
 
         for node in manifest.nodes.values():
             if node.resource_type == NodeType.Source:
@@ -811,7 +812,16 @@ class BaseAdapter(object):
                 identifier='__phony__',
             ).include(identifier=False).quote(database=quote_db, schema=False)
 
-            information_schema[relation.database.lower()] = information_schema_rel
+            db_lower = relation.database.lower()
+            duped_value = dupe_mapping.get(db_lower)
+
+            if duped_value is not None and duped_value != relation.database:
+                dbt.exceptions.raise_ambiguous_database_identifier(
+                        relation.database,
+                        duped_value)
+
+            dupe_mapping[db_lower] = relation.database
+            information_schema[db_lower] = information_schema_rel
 
         return information_schema
 

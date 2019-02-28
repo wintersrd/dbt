@@ -409,13 +409,4 @@ class Manifest(APIObject):
         })
 
     def get_used_databases(self):
-        databases = frozenset(node.database for node in self.nodes.values())
-
-        database_counter = defaultdict(int)
-        for database in databases:
-            key = database.lower()
-            database_counter[key] += 1
-            if database_counter[key] > 1:
-                raise RuntimeError("not unique db name TODO TODO")
-        return databases
-
+        return frozenset(node.database for node in self.nodes.values())

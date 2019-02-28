@@ -505,6 +505,16 @@ def raise_duplicate_resource_name(node_1, node_2):
             node_2['unique_id'], node_2['original_file_path']))
 
 
+def raise_ambiguous_database_identifier(db_1, db_2):
+    raise_compiler_error(
+        'dbt found two resources with differently cased database identifiers:\n'
+        ' - {}\n'
+        ' - {}\n\n'
+        'To fix this, make sure that every instance of this identifier is '
+        'cased consistently across your profile, sources, and models.'.format(
+            db_1, db_2))
+
+
 def raise_ambiguous_alias(node_1, node_2):
     duped_name = "{}.{}".format(node_1['schema'], node_1['alias'])
 
@@ -599,6 +609,7 @@ CONTEXT_EXPORTS = {
         missing_config,
         missing_materialization,
         missing_relation,
+        raise_ambiguous_database_identifier,
         raise_ambiguous_alias,
         raise_ambiguous_catalog_match,
         raise_cache_inconsistent,
