@@ -380,6 +380,7 @@ def generate_base(model, model_dict, config, manifest, source_config,
     post_hooks = None
 
     db_wrapper = DatabaseWrapper(connection_name, adapter)
+    information_schema = db_wrapper.get_information_schema_mapping(manifest)
 
     context = dbt.utils.merge(context, {
         "adapter": db_wrapper,
@@ -387,7 +388,7 @@ def generate_base(model, model_dict, config, manifest, source_config,
             "Relation": db_wrapper.Relation,
             "Column": adapter.Column,
         },
-        "information_schema": db_wrapper.get_information_schema_mapping(manifest),
+        "information_schema": information_schema,
         "column": adapter.Column,
         "config": provider.Config(model_dict, source_config),
         "database": config.credentials.database,

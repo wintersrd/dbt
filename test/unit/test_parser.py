@@ -202,6 +202,11 @@ class SchemaParserTest(BaseParserTest):
                     'period': 'hour'
                 },
             },
+            quoting={
+                'database': True,
+                'schema': True,
+                'identifier': True
+            },
             loaded_at_field='something',
             database='test',
             schema='foo',

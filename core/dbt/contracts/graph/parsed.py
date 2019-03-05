@@ -558,6 +558,7 @@ class ParsedMacro(APIObject):
         # available in this class. should we just generate this here?
         return dbt.clients.jinja.macro_generator(self._contents)
 
+
 # This is just the file + its ID
 PARSED_DOCUMENTATION_CONTRACT = deep_merge(
     UNPARSED_DOCUMENTATION_FILE_CONTRACT,
@@ -686,7 +687,8 @@ PARSED_SOURCE_DEFINITION_CONTRACT = deep_merge(
         # note that while required, loaded_at_field and freshness may be null
         'required': [
             'source_name', 'source_description', 'loaded_at_field', 'loader',
-            'freshness', 'description', 'columns', 'docrefs', 'identifier', 'quoting'
+            'freshness', 'description', 'columns', 'docrefs', 'identifier',
+            'quoting'
         ],
     }
 )

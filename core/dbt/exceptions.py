@@ -507,7 +507,7 @@ def raise_duplicate_resource_name(node_1, node_2):
 
 def raise_ambiguous_database_identifier(db_1, db_2):
     raise_compiler_error(
-        'dbt found two resources with differently cased database identifiers:\n'
+        'dbt found two resources with differently cased database names:\n'
         ' - {}\n'
         ' - {}\n\n'
         'To fix this, make sure that every instance of this identifier is '
