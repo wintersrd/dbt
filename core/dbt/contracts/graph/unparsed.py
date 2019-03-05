@@ -1,6 +1,7 @@
 from dbt.api import APIObject
 
 from dbt.node_types import NodeType
+from dbt.contracts.common import QUOTING_CONFIG_CONTRACT
 from dbt.utils import deep_merge
 
 
@@ -250,6 +251,7 @@ UNPARSED_SOURCE_TABLE_DEFINITION_CONTRACT = deep_merge(
                 'minLength': 1,
             },
         },
+        'quoting': QUOTING_CONFIG_CONTRACT,
     }
 )
 
@@ -278,6 +280,7 @@ UNPARSED_SOURCE_DEFINITION_CONTRACT = deep_merge(
                 'type': 'string',
                 'description': 'The user-supplied description of the source',
             },
+            'quoting': QUOTING_CONFIG_CONTRACT,
             'database': {
                 'type': 'string',
                 'description': 'The database name for the source table',

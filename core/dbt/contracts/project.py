@@ -1,6 +1,7 @@
 from dbt.api.object import APIObject
 from dbt.logger import GLOBAL_LOGGER as logger  # noqa
 from dbt.utils import deep_merge
+from dbt.contracts.common import QUOTING_CONFIG_CONTRACT
 
 # TODO: add description fields.
 ARCHIVE_TABLE_CONFIG_CONTRACT = {
@@ -104,24 +105,7 @@ PROJECT_CONTRACT = {
         'modules-path': {
             'type': 'string',
         },
-        'quoting': {
-            'type': 'object',
-            'additionalProperties': False,
-            'properties': {
-                'identifier': {
-                    'type': 'boolean',
-                },
-                'schema': {
-                    'type': 'boolean',
-                },
-                'database': {
-                    'type': 'boolean',
-                },
-                'project': {
-                    'type': 'boolean',
-                }
-            },
-        },
+        'quoting': QUOTING_CONFIG_CONTRACT,
         'models': {
             'type': 'object',
             'additionalProperties': True,
