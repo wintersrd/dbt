@@ -1005,6 +1005,7 @@ class TestDocsGenerate(DBTIntegrationTest):
         my_schema_name = self.unique_schema()
         docs_path = self.dir('ref_models/docs.md')
         docs_file = _read_file(docs_path).lstrip()
+        source_quoting = self.adapter.Relation.DEFAULTS['quote_policy']
         return {
             'nodes': {
                 'model.test.ephemeral_copy': {
@@ -1236,7 +1237,9 @@ class TestDocsGenerate(DBTIntegrationTest):
                    'schema': my_schema_name,
                    'source_description': "{{ doc('source_info') }}",
                    'source_name': 'my_source',
-                   'unique_id': 'source.test.my_source.my_table'
+                   'quoting': source_quoting,
+                   'unique_id': 'source.test.my_source.my_table',
+
                 }
             },
             'docs': {
