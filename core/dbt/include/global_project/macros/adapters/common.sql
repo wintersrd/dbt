@@ -181,12 +181,7 @@
     {%- if database.lower() in information_schema -%}
         {{ information_schema[database.lower()] }}
     {%- else -%}
-        {%- set warning -%}
-            Tried to access a nonexistent information schema for db={{database.lower()}}
-            Known schemas: {{ information_schema }}
-        {%- endset -%}
-        {% do log(warning) %}
-        information_schema
+        {{ database }}.information_schema
     {%- endif -%}
   {%- else -%}
     information_schema
