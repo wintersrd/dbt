@@ -24,6 +24,7 @@ def printer_width(printer_width):
     global PRINTER_WIDTH
     PRINTER_WIDTH = printer_width
 
+
 def get_timestamp():
     return time.strftime("%H:%M:%S")
 
