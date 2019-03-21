@@ -20,6 +20,7 @@ def use_colors():
     global USE_COLORS
     USE_COLORS = True
 
+
 def printer_width(printer_width):
     global PRINTER_WIDTH
     PRINTER_WIDTH = printer_width
