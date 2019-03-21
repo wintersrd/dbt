@@ -62,7 +62,7 @@ class UserConfig(object):
     def __init__(self, send_anonymous_usage_stats, use_colors, printer_width):
         self.send_anonymous_usage_stats = send_anonymous_usage_stats
         self.use_colors = use_colors
-        
+        self.printer_width = printer_width
 
     @classmethod
     def from_dict(cls, cfg=None):
