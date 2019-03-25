@@ -155,9 +155,17 @@ class RequestTaskHandler(object):
 class RPCServerTask(ConfiguredTask):
     def __init__(self, args, config, tasks=None):
         super(RPCServerTask, self).__init__(args, config)
+
+        logger.info('Initializaiton: compiling local project')
         # compile locally
-        self.compile_task = CompileTask(args, config)
-        self.compile_task.run()
+        try:
+            self.compile_task = CompileTask(args, config)
+            self.compile_task.run()
+        except Exception:
+            if self.args.debug:
+                logger.error('Could not compile local project!', exc_info=True)
+            raise
+
         self.dispatcher = Dispatcher()
         tasks = tasks or [RemoteCompileTask, RemoteRunTask]
         for cls in tasks:
