@@ -106,9 +106,37 @@ class RequestTaskHandler(object):
         else:
             self.queue.put([rpc.QueueMessageType.Result, result])
 
+    def _single_threaded(self, kwargs):
+        error = None
+        result = None
+        try:
+            result = self.task.handle_request(**kwargs)
+        except dbt.exceptions.RPCTimeoutException as exc:
+            raise rpc.timeout_error(self.timeout)
+        except rpc.RPCException as exc:
+            error = exc
+        except dbt.exceptions.Exception as exc:
+            logger.debug('dbt runtime exception', exc_info=True)
+            raise rpc.dbt_error(exc)
+        except Exception as exc:
+            logger.debug('uncaught python exception', exc_info=True)
+            raise rpc.server_error(exc)
+
+        if error is not None:
+            raise rpc.RPCException.from_error(error.error)
+        return result
+
     def handle(self, kwargs):
         self.started = time.time()
         self.timeout = kwargs.pop('timeout', None)
+
+        if self.task.args.single_threaded:
+            logger.warning(
+                'Executing request in single-threaded mode. This is suitable '
+                'for testing only! Timeouts are disabled.'
+            )
+            return self._single_threaded(kwargs)
+
         self.queue = multiprocessing.Queue()
         self.process = multiprocessing.Process(
             target=self.task_bootstrap,
