@@ -189,11 +189,14 @@
   {{ return(adapter_macro('list_schemas', database)) }}
 {% endmacro %}
 
-{% macro default__list_schemas(database) -%}
+
+{% macro snowflake__list_schemas(database) -%}
   {% call statement('list_schemas', fetch_result=True, auto_begin=False) %}
-    select distinct schema_name
-    from {{ information_schema_name(database) }}.schemata
-    where catalog_name='{{ database }}'
+    show terse schemas in account;
+    select distinct
+        "name" as schema_name
+    from table(result_scan(last_query_id(-1)))
+    where "database_name" ilike '{{ database }}'
   {% endcall %}
   {{ return(load_result('list_schemas').table) }}
 {% endmacro %}
