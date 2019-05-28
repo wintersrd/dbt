@@ -326,7 +326,9 @@ class SchemaBaseTestParser(MacrosKnownParser):
                                  tags=['schema'],
                                  fqn_extra=None,
                                  fqn=fqn_override,
-                                 column_name=column_name)
+                                 column_name=column_name,
+                                 test_name=test_info.name,
+                                 test_arguments=test_info.args)
 
         parse_ok = self.check_block_parsing(full_name, test_path, raw_sql)
         if not parse_ok:

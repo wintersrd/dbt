@@ -270,6 +270,18 @@ COLUMN_TEST_CONTRACT = {
                 'associated with (if there is one)'
             )
         },
+        'test_name': {
+            'type': ['string', 'null'],
+             'description': (
+                'The name of the associated test'
+             )
+        },
+        'test_arguments': {
+            'type': ['string', 'object', 'null'],
+             'description': (
+                'The arguments provided to the test'
+             )
+        },
     }
 }
 
