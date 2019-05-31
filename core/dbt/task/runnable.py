@@ -11,7 +11,7 @@ from dbt.adapters.factory import get_adapter
 from dbt.logger import GLOBAL_LOGGER as logger
 from dbt.compat import to_unicode
 from dbt.compilation import compile_manifest
-from dbt.contracts.graph.manifest import CompileResultNode
+from dbt.contracts.graph.manifest import make_compile_result
 from dbt.contracts.results import ExecutionResult
 from dbt.loader import GraphLoader
 
@@ -176,7 +176,7 @@ class GraphRunnableTask(ManifestTask):
         if not is_ephemeral:
             self.node_results.append(result)
 
-        node = CompileResultNode(**result.node)
+        node = make_compile_result(**result.node)
         node_id = node.unique_id
         self.manifest.nodes[node_id] = node
 

@@ -11,7 +11,7 @@ import dbt.context.parser
 from dbt.include.global_project import PROJECT_NAME as GLOBAL_PROJECT_NAME
 from dbt.utils import coalesce
 from dbt.logger import GLOBAL_LOGGER as logger
-from dbt.contracts.graph.parsed import ParsedNode
+from dbt.contracts.graph.parsed import make_parsed_node
 from dbt.parser.source_config import SourceConfig
 
 
@@ -138,7 +138,7 @@ class MacrosKnownParser(BaseParser):
                                       agate_table, archive_config,
                                       column_name):
         """Update the unparsed node dictionary and build the basis for an
-        intermediate ParsedNode that will be passed into the renderer
+        intermediate node that will be passed into the renderer
         """
         # because this takes and returns dicts, subclasses can safely override
         # this and mutate its results using super() both before and after.
@@ -175,7 +175,7 @@ class MacrosKnownParser(BaseParser):
             'alias': node_dict.get('name'),
         })
 
-        # if there's a column, it should end up part of the ParsedNode
+        # if there's a column, it should end up part of the parsed result
         if column_name is not None:
             node_dict['column_name'] = column_name
 
@@ -257,7 +257,7 @@ class MacrosKnownParser(BaseParser):
             config, node.serialize(), node_path, config, tags, fqn,
             agate_table, archive_config, column_name
         )
-        parsed_node = ParsedNode(**parsed_dict)
+        parsed_node = make_parsed_node(**parsed_dict)
 
         self._render_with_context(parsed_node, config)
         self._update_parsed_node_info(parsed_node, config)

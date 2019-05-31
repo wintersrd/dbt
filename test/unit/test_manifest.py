@@ -2,15 +2,15 @@ import unittest
 import mock
 
 import copy
-import os
 
 import dbt.flags
 from dbt import tracking
 from dbt.contracts.graph.manifest import Manifest
-from dbt.contracts.graph.parsed import ParsedNode
-from dbt.contracts.graph.compiled import CompiledNode
+from dbt.contracts.graph.parsed import ParsedModel, ParsedSeed
+from dbt.contracts.graph.compiled import CompiledModel
 from dbt.utils import timestring
 import freezegun
+
 
 class ManifestTest(unittest.TestCase):
     def setUp(self):
@@ -30,7 +30,7 @@ class ManifestTest(unittest.TestCase):
         }
 
         self.nested_nodes = {
-            'model.snowplow.events': ParsedNode(
+            'model.snowplow.events': ParsedModel(
                 name='events',
                 database='dbt',
                 schema='analytics',
@@ -53,7 +53,7 @@ class ManifestTest(unittest.TestCase):
                 root_path='',
                 raw_sql='does not matter'
             ),
-            'model.root.events': ParsedNode(
+            'model.root.events': ParsedModel(
                 name='events',
                 database='dbt',
                 schema='analytics',
@@ -76,7 +76,7 @@ class ManifestTest(unittest.TestCase):
                 root_path='',
                 raw_sql='does not matter'
             ),
-            'model.root.dep': ParsedNode(
+            'model.root.dep': ParsedModel(
                 name='dep',
                 database='dbt',
                 schema='analytics',
@@ -99,7 +99,7 @@ class ManifestTest(unittest.TestCase):
                 root_path='',
                 raw_sql='does not matter'
             ),
-            'model.root.nested': ParsedNode(
+            'model.root.nested': ParsedModel(
                 name='nested',
                 database='dbt',
                 schema='analytics',
@@ -122,7 +122,7 @@ class ManifestTest(unittest.TestCase):
                 root_path='',
                 raw_sql='does not matter'
             ),
-            'model.root.sibling': ParsedNode(
+            'model.root.sibling': ParsedModel(
                 name='sibling',
                 database='dbt',
                 schema='analytics',
@@ -145,7 +145,7 @@ class ManifestTest(unittest.TestCase):
                 root_path='',
                 raw_sql='does not matter'
             ),
-            'model.root.multi': ParsedNode(
+            'model.root.multi': ParsedModel(
                 name='multi',
                 database='dbt',
                 schema='analytics',
@@ -266,7 +266,7 @@ class ManifestTest(unittest.TestCase):
         self.assertEqual(set(flat_graph), set(['nodes', 'macros']))
         self.assertEqual(flat_graph['macros'], {})
         self.assertEqual(set(flat_nodes), set(self.nested_nodes))
-        expected_keys = set(ParsedNode.SCHEMA['required']) | {'agate_table'}
+        expected_keys = set(ParsedModel.SCHEMA['required'])
         for node in flat_nodes.values():
             self.assertEqual(set(node), expected_keys)
 
@@ -327,7 +327,7 @@ class ManifestTest(unittest.TestCase):
 
     def test_get_resource_fqns(self):
         nodes = copy.copy(self.nested_nodes)
-        nodes['seed.root.seed'] = ParsedNode(
+        nodes['seed.root.seed'] = ParsedSeed(
             name='seed',
             database='dbt',
             schema='analytics',
@@ -385,7 +385,7 @@ class MixedManifestTest(unittest.TestCase):
         }
 
         self.nested_nodes = {
-            'model.snowplow.events': CompiledNode(
+            'model.snowplow.events': CompiledModel(
                 name='events',
                 database='dbt',
                 schema='analytics',
@@ -413,7 +413,7 @@ class MixedManifestTest(unittest.TestCase):
                 injected_sql=None,
                 extra_ctes=[]
             ),
-            'model.root.events': CompiledNode(
+            'model.root.events': CompiledModel(
                 name='events',
                 database='dbt',
                 schema='analytics',
@@ -441,7 +441,7 @@ class MixedManifestTest(unittest.TestCase):
                 injected_sql='and this also does not matter',
                 extra_ctes=[]
             ),
-            'model.root.dep': ParsedNode(
+            'model.root.dep': ParsedModel(
                 name='dep',
                 database='dbt',
                 schema='analytics',
@@ -464,7 +464,7 @@ class MixedManifestTest(unittest.TestCase):
                 root_path='',
                 raw_sql='does not matter'
             ),
-            'model.root.nested': ParsedNode(
+            'model.root.nested': ParsedModel(
                 name='nested',
                 database='dbt',
                 schema='analytics',
@@ -487,7 +487,7 @@ class MixedManifestTest(unittest.TestCase):
                 root_path='',
                 raw_sql='does not matter'
             ),
-            'model.root.sibling': ParsedNode(
+            'model.root.sibling': ParsedModel(
                 name='sibling',
                 database='dbt',
                 schema='analytics',
@@ -510,7 +510,7 @@ class MixedManifestTest(unittest.TestCase):
                 root_path='',
                 raw_sql='does not matter'
             ),
-            'model.root.multi': ParsedNode(
+            'model.root.multi': ParsedModel(
                 name='multi',
                 database='dbt',
                 schema='analytics',
@@ -623,20 +623,47 @@ class MixedManifestTest(unittest.TestCase):
 
     def test__to_flat_graph(self):
         nodes = copy.copy(self.nested_nodes)
+        nodes['seed.root.seed'] = ParsedSeed(
+            name='seed',
+            database='dbt',
+            schema='analytics',
+            alias='seed',
+            resource_type='seed',
+            unique_id='seed.root.seed',
+            fqn=['root', 'seed'],
+            empty=False,
+            package_name='root',
+            refs=[['events']],
+            sources=[],
+            depends_on={
+                'nodes': [],
+                'macros': []
+            },
+            config=self.model_config,
+            tags=[],
+            path='seed.csv',
+            original_file_path='seed.csv',
+            root_path='',
+            agate_table=object(),
+            raw_sql='-- csv --'
+        )
         manifest = Manifest(nodes=nodes, macros={}, docs={},
                             generated_at=timestring(), disabled=[])
         flat_graph = manifest.to_flat_graph()
         flat_nodes = flat_graph['nodes']
         self.assertEqual(set(flat_graph), set(['nodes', 'macros']))
         self.assertEqual(flat_graph['macros'], {})
-        self.assertEqual(set(flat_nodes), set(self.nested_nodes))
-        parsed_keys = set(ParsedNode.SCHEMA['required']) | {'agate_table'}
-        compiled_keys = set(CompiledNode.SCHEMA['required']) | {'agate_table'}
+        self.assertEqual(set(flat_nodes), set(self.nested_nodes) | {'seed.root.seed'})
+        parsed_keys = set(ParsedModel.SCHEMA['required'])
+        compiled_keys = set(CompiledModel.SCHEMA['required'])
         compiled_count = 0
         for node in flat_nodes.values():
             if node.get('compiled'):
-                self.assertEqual(set(node), compiled_keys)
+                expected = compiled_keys
                 compiled_count += 1
             else:
-                self.assertEqual(set(node), parsed_keys)
+                expected = parsed_keys
+            if node['resource_type'] == 'seed':
+                expected = {'agate_table'} | expected
+            self.assertEqual(set(node), expected)
         self.assertEqual(compiled_count, 2)

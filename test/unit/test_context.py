@@ -1,16 +1,15 @@
 import mock
 import unittest
 
-from dbt.contracts.graph.parsed import ParsedNode
+from dbt.contracts.graph.parsed import ParsedModel
 from dbt.context import parser, runtime
 import dbt.exceptions
 from test.unit.mock_adapter import adapter_factory
 
 
-
 class TestVar(unittest.TestCase):
     def setUp(self):
-        self.model = ParsedNode(
+        self.model = ParsedModel(
             alias='model_one',
             name='model_one',
             database='dbt',

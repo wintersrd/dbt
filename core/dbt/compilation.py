@@ -16,7 +16,7 @@ import dbt.exceptions
 import dbt.flags
 import dbt.loader
 import dbt.config
-from dbt.contracts.graph.compiled import CompiledNode
+from dbt.contracts.graph.compiled import make_compiled_node
 
 from dbt.logger import GLOBAL_LOGGER as logger
 
@@ -69,7 +69,7 @@ def recursively_prepend_ctes(model, manifest):
 
     if dbt.flags.STRICT_MODE:
         # ensure that the cte we're adding to is compiled
-        CompiledNode(**model.serialize())
+        make_compiled_node(**model.serialize())
 
     prepended_ctes = []
 
@@ -112,7 +112,7 @@ class Compiler(object):
             'extra_ctes': [],
             'injected_sql': None,
         })
-        compiled_node = CompiledNode(**data)
+        compiled_node = make_compiled_node(**data)
 
         context = dbt.context.runtime.generate(
             compiled_node, self.config, manifest)

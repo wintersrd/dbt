@@ -48,8 +48,6 @@ def get_model_name_or_none(model):
         name = model
     elif isinstance(model, dict):
         name = model.get('alias', model.get('name'))
-    elif hasattr(model, 'nice_name'):
-        name = model.nice_name
     else:
         name = str(model)
     return name

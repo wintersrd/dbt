@@ -1,8 +1,15 @@
 from dbt.api import APIObject
-from dbt.contracts.graph.parsed import PARSED_NODE_CONTRACT, \
-    PARSED_MACRO_CONTRACT, PARSED_DOCUMENTATION_CONTRACT, \
-    PARSED_SOURCE_DEFINITION_CONTRACT
-from dbt.contracts.graph.compiled import COMPILED_NODE_CONTRACT, CompiledNode
+from dbt.contracts.graph.parsed import ParsedArchiveNode, \
+    ParsedSourceDefinition, PARSED_MACRO_CONTRACT, \
+    PARSED_DOCUMENTATION_CONTRACT, PARSED_SOURCE_DEFINITION_CONTRACT, \
+    PARSED_SEED_CONTRACT, PARSED_TEST_CONTRACT, PARSED_OPERATION_CONTRACT, \
+    PARSED_RPC_CONTRACT, PARSED_ANALYSIS_CONTRACT, PARSED_MODEL_CONTRACT, \
+    PARSED_ARCHIVE_NODE_CONTRACT
+from dbt.contracts.graph.compiled import COMPILED_SEED_CONTRACT, \
+    COMPILED_TEST_CONTRACT, COMPILED_OPERATION_CONTRACT, \
+    COMPILED_RPC_CONTRACT, COMPILED_ANALYSIS_CONTRACT, \
+    COMPILED_MODEL_CONTRACT, CompiledModel, CompiledSeed, CompiledTest, \
+    CompiledRPC, CompiledAnalysis, CompiledOperation
 from dbt.exceptions import raise_duplicate_resource_name
 from dbt.node_types import NodeType
 from dbt.logger import GLOBAL_LOGGER as logger
@@ -14,8 +21,19 @@ import dbt.utils
 # node they were given.
 COMPILE_RESULT_NODE_CONTRACT = {
     'anyOf': [
-        PARSED_NODE_CONTRACT,
-        COMPILED_NODE_CONTRACT,
+        PARSED_SEED_CONTRACT,
+        PARSED_TEST_CONTRACT,
+        PARSED_OPERATION_CONTRACT,
+        PARSED_RPC_CONTRACT,
+        PARSED_ANALYSIS_CONTRACT,
+        PARSED_MODEL_CONTRACT,
+        PARSED_ARCHIVE_NODE_CONTRACT,
+        COMPILED_SEED_CONTRACT,
+        COMPILED_TEST_CONTRACT,
+        COMPILED_OPERATION_CONTRACT,
+        COMPILED_RPC_CONTRACT,
+        COMPILED_ANALYSIS_CONTRACT,
+        COMPILED_MODEL_CONTRACT,
         PARSED_SOURCE_DEFINITION_CONTRACT,
     ]
 }
@@ -86,7 +104,17 @@ PARSED_MANIFEST_CONTRACT = {
         'docs': PARSED_DOCUMENTATIONS_CONTRACT,
         'disabled': {
             'type': 'array',
-            'items': PARSED_NODE_CONTRACT,
+            'items': {
+                'anyOf': [
+                    PARSED_SEED_CONTRACT,
+                    PARSED_TEST_CONTRACT,
+                    PARSED_OPERATION_CONTRACT,
+                    PARSED_RPC_CONTRACT,
+                    PARSED_ANALYSIS_CONTRACT,
+                    PARSED_MODEL_CONTRACT,
+                    PARSED_ARCHIVE_NODE_CONTRACT,
+                ],
+            },
             'description': 'An array of disabled nodes',
         },
         'generated_at': {
@@ -137,8 +165,59 @@ PARSED_MANIFEST_CONTRACT = {
 }
 
 
-class CompileResultNode(CompiledNode):
-    SCHEMA = COMPILE_RESULT_NODE_CONTRACT
+class CompileResultModel(CompiledModel):
+    SCHEMA = {
+        'oneOf': [PARSED_MODEL_CONTRACT, COMPILED_MODEL_CONTRACT]
+    }
+
+
+class CompileResultSeed(CompiledSeed):
+    SCHEMA = {
+        'oneOf': [PARSED_SEED_CONTRACT, COMPILED_SEED_CONTRACT]
+    }
+
+
+class CompileResultTest(CompiledTest):
+    SCHEMA = {
+        'oneOf': [PARSED_TEST_CONTRACT, COMPILED_TEST_CONTRACT]
+    }
+
+
+class CompileResultOperation(CompiledOperation):
+    SCHEMA = {
+        'oneOf': [PARSED_OPERATION_CONTRACT, COMPILED_OPERATION_CONTRACT]
+    }
+
+
+class CompileResultRPC(CompiledRPC):
+    SCHEMA = {
+        'oneOf': [PARSED_RPC_CONTRACT, COMPILED_RPC_CONTRACT],
+    }
+
+
+class CompileResultAnalysis(CompiledAnalysis):
+    SCHEMA = {
+        'oneOf': [PARSED_ANALYSIS_CONTRACT, COMPILED_ANALYSIS_CONTRACT]
+    }
+
+
+def make_compile_result(**kwargs):
+    """A compatibility hack, for now"""
+    _node_types = {
+        NodeType.Model: CompileResultModel,
+        NodeType.Seed: CompileResultSeed,
+        NodeType.Test: CompileResultTest,
+        NodeType.Operation: CompileResultOperation,
+        NodeType.RPCCall: CompileResultRPC,
+        NodeType.Analysis: CompileResultAnalysis,
+        NodeType.Archive: ParsedArchiveNode,
+        NodeType.Source: ParsedSourceDefinition,
+    }
+    assert 'resource_type' in kwargs, 'not a compiled node dict!!!'
+    resource_type = kwargs['resource_type']
+    assert resource_type in _node_types, 'unknown type ' + resource_type
+    cls = _node_types[resource_type]
+    return cls(**kwargs)
 
 
 def _sort_values(dct):

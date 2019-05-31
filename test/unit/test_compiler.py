@@ -4,9 +4,9 @@ import os
 
 import dbt.flags
 import dbt.compilation
-from collections import OrderedDict
 from dbt.contracts.graph.manifest import Manifest
-from dbt.contracts.graph.compiled import CompiledNode
+from dbt.contracts.graph.compiled import CompiledModel
+
 
 class CompilerTest(unittest.TestCase):
 
@@ -51,7 +51,7 @@ class CompilerTest(unittest.TestCase):
         input_graph = Manifest(
             macros={},
             nodes={
-                'model.root.view': CompiledNode(
+                'model.root.view': CompiledModel(
                     name='view',
                     database='dbt',
                     schema='analytics',
@@ -85,7 +85,7 @@ class CompilerTest(unittest.TestCase):
                         'with cte as (select * from something_else) '
                         'select * from __dbt__CTE__ephemeral')
                 ),
-                'model.root.ephemeral': CompiledNode(
+                'model.root.ephemeral': CompiledModel(
                     name='ephemeral',
                     database='dbt',
                     schema='analytics',
@@ -142,7 +142,7 @@ class CompilerTest(unittest.TestCase):
         input_graph = Manifest(
             macros={},
             nodes={
-                'model.root.view': CompiledNode(
+                'model.root.view': CompiledModel(
                     name='view',
                     database='dbt',
                     schema='analytics',
@@ -172,7 +172,7 @@ class CompilerTest(unittest.TestCase):
                     compiled_sql=('with cte as (select * from something_else) '
                                      'select * from source_table')
                 ),
-                'model.root.view_no_cte': CompiledNode(
+                'model.root.view_no_cte': CompiledModel(
                     name='view_no_cte',
                     database='dbt',
                     schema='analytics',
@@ -241,7 +241,7 @@ class CompilerTest(unittest.TestCase):
         input_graph = Manifest(
             macros={},
             nodes={
-                'model.root.view': CompiledNode(
+                'model.root.view': CompiledModel(
                     name='view',
                     database='dbt',
                     schema='analytics',
@@ -273,7 +273,7 @@ class CompilerTest(unittest.TestCase):
                     injected_sql='',
                     compiled_sql='select * from __dbt__CTE__ephemeral'
                 ),
-                'model.root.ephemeral': CompiledNode(
+                'model.root.ephemeral': CompiledModel(
                     name='ephemeral',
                     database='dbt',
                     schema='analytics',
@@ -336,7 +336,7 @@ class CompilerTest(unittest.TestCase):
         input_graph = Manifest(
             macros={},
             nodes={
-                'model.root.view': CompiledNode(
+                'model.root.view': CompiledModel(
                     name='view',
                     database='dbt',
                     schema='analytics',
@@ -368,7 +368,7 @@ class CompilerTest(unittest.TestCase):
                     injected_sql='',
                     compiled_sql='select * from __dbt__CTE__ephemeral'
                 ),
-                'model.root.ephemeral': CompiledNode(
+                'model.root.ephemeral': CompiledModel(
                     name='ephemeral',
                     database='dbt',
                     schema='analytics',
@@ -398,7 +398,7 @@ class CompilerTest(unittest.TestCase):
                     injected_sql='',
                     compiled_sql='select * from __dbt__CTE__ephemeral_level_two' # noqa
                 ),
-                'model.root.ephemeral_level_two': CompiledNode(
+                'model.root.ephemeral_level_two': CompiledModel(
                     name='ephemeral_level_two',
                     database='dbt',
                     schema='analytics',

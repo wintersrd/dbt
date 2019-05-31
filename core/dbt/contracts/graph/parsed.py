@@ -293,16 +293,16 @@ HAS_RELATION_METADATA_CONTRACT = {
 }
 
 
-PARSED_NODE_CONTRACT = deep_merge(
+_PARSED_MATERIALIZED_CONTRACT = deep_merge(
     UNPARSED_NODE_CONTRACT,
     HAS_UNIQUE_ID_CONTRACT,
+    HAS_RELATION_METADATA_CONTRACT,
     HAS_FQN_CONTRACT,
-    CAN_REF_CONTRACT,
     HAS_DOCREFS_CONTRACT,
     HAS_DESCRIPTION_CONTRACT,
     HAS_CONFIG_CONTRACT,
-    COLUMN_TEST_CONTRACT,
-    HAS_RELATION_METADATA_CONTRACT,
+    # TODO: remove this from seeds (need to change the parser?)
+    CAN_REF_CONTRACT,
     {
         'properties': {
             'alias': {
@@ -322,33 +322,20 @@ PARSED_NODE_CONTRACT = deep_merge(
                     'type': 'string',
                 }
             },
-            # this is really nodes-only
-            'patch_path': {
-                'type': 'string',
-                'description': (
-                    'The path to the patch source if the node was patched'
-                ),
-            },
-            'build_path': {
-                'type': 'string',
-                'description': (
-                    'In seeds, the path to the source file used during build.'
-                ),
-            },
         },
         'required': ['empty', 'tags', 'alias'],
     }
 )
 
 
-class ParsedNode(APIObject):
-    SCHEMA = PARSED_NODE_CONTRACT
+class ParsedMaterializedNode(APIObject):
+    SCHEMA = _PARSED_MATERIALIZED_CONTRACT
 
     def __init__(self, agate_table=None, **kwargs):
         self.agate_table = agate_table
         kwargs.setdefault('columns', {})
         kwargs.setdefault('description', '')
-        super(ParsedNode, self).__init__(**kwargs)
+        super(ParsedMaterializedNode, self).__init__(**kwargs)
 
     @property
     def is_refable(self):
@@ -368,37 +355,11 @@ class ParsedNode(APIObject):
         return self.depends_on['nodes']
 
     def to_dict(self):
-        """Similar to 'serialize', but tacks the agate_table attribute in too.
-        Why we need this:
-            - networkx demands that the attr_dict it gets (the node) be a dict
-                or subclass and does not respect the abstract Mapping class
-            - many jinja things access the agate_table attribute (member) of
-                the node dict.
-            - the nodes are passed around between those two contexts in a way
-                that I don't quite have clear enough yet.
-        """
-        ret = self.serialize()
-        # note: not a copy/deep copy.
-        ret['agate_table'] = self.agate_table
-        return ret
+        '''Outside of seeds, this is the same as serialize().'''
+        return self.serialize()
 
     def to_shallow_dict(self):
-        ret = self._contents.copy()
-        ret['agate_table'] = self.agate_table
-        return ret
-
-    def patch(self, patch):
-        """Given a ParsedNodePatch, add the new information to the node."""
-        # explicitly pick out the parts to update so we don't inadvertently
-        # step on the model name or anything
-        self._contents.update({
-            'patch_path': patch.original_file_path,
-            'description': patch.description,
-            'columns': patch.columns,
-            'docrefs': patch.docrefs,
-        })
-        # patches always trigger re-validation
-        self.validate()
+        return self._contents.copy()
 
     def get_materialization(self):
         return self.config.get('materialized')
@@ -442,6 +403,157 @@ class ParsedNode(APIObject):
     @config.setter
     def config(self, value):
         self._contents['config'] = value
+
+
+PARSED_SEED_CONTRACT = deep_merge(
+    _PARSED_MATERIALIZED_CONTRACT,
+    {
+        'properties': {
+            # TODO: remove this from seeds?
+            'tags': {
+                'type': 'array',
+                'items': {
+                    'enum': [],
+                },
+                'description': 'The tags for the test',
+            },
+            'resource_type': {
+                'enum': [NodeType.Seed]
+            }
+        }
+    }
+)
+
+
+class ParsedSeed(ParsedMaterializedNode):
+    SCHEMA = PARSED_SEED_CONTRACT
+
+    def to_dict(self):
+        """Similar to 'serialize', but tacks the agate_table attribute in too.
+        Why we need this:
+            - networkx demands that the attr_dict it gets (the node) be a dict
+                or subclass and does not respect the abstract Mapping class
+            - many jinja things access the agate_table attribute (member) of
+                the node dict.
+            - the nodes are passed around between those two contexts in a way
+                that I don't quite have clear enough yet.
+        """
+        ret = super(ParsedSeed, self).to_dict()
+        # note: not a copy/deep copy.
+        ret['agate_table'] = self.agate_table
+        return ret
+
+    def to_shallow_dict(self):
+        ret = super(ParsedSeed, self).to_shallow_dict()
+        ret['agate_table'] = self.agate_table
+        return ret
+
+
+PARSED_TEST_CONTRACT = deep_merge(
+    _PARSED_MATERIALIZED_CONTRACT,
+    COLUMN_TEST_CONTRACT,
+    {
+        'properties': {
+            'tags': {
+                'type': 'array',
+                'items': {
+                    'enum': ['data', 'schema'],
+                },
+                'description': 'The tag for the test type: data or schema',
+            },
+            'resource_type': {
+                'enum': [NodeType.Test]
+            }
+        }
+    }
+)
+
+
+class ParsedTest(ParsedMaterializedNode):
+    SCHEMA = PARSED_TEST_CONTRACT
+
+
+PARSED_OPERATION_CONTRACT = deep_merge(
+    _PARSED_MATERIALIZED_CONTRACT,
+    {
+        'properties': {
+            'resource_type': {
+                'enum': [NodeType.Operation]
+            }
+        }
+    }
+)
+
+
+class ParsedOperation(ParsedMaterializedNode):
+    SCHEMA = PARSED_OPERATION_CONTRACT
+
+
+PARSED_RPC_CONTRACT = deep_merge(
+    _PARSED_MATERIALIZED_CONTRACT,
+    {
+        'properties': {
+            'resource_type': {
+                'enum': [NodeType.RPCCall]
+            }
+        }
+    }
+)
+
+
+class ParsedRPC(ParsedMaterializedNode):
+    SCHEMA = PARSED_RPC_CONTRACT
+
+
+PARSED_ANALYSIS_CONTRACT = deep_merge(
+    _PARSED_MATERIALIZED_CONTRACT,
+    {
+        'properties': {
+            'resource_type': {
+                'enum': [NodeType.Analysis]
+            }
+        }
+    }
+)
+
+
+class ParsedAnalysis(ParsedMaterializedNode):
+    SCHEMA = PARSED_ANALYSIS_CONTRACT
+
+
+PARSED_MODEL_CONTRACT = deep_merge(
+    _PARSED_MATERIALIZED_CONTRACT,
+    {
+        'properties': {
+            'patch_path': {
+                'type': 'string',
+                'description': (
+                    'The path to the patch source if the node was patched'
+                ),
+            },
+            'resource_type': {
+                'enum': [NodeType.Model]
+            }
+        }
+    }
+)
+
+
+class ParsedModel(ParsedMaterializedNode):
+    SCHEMA = PARSED_MODEL_CONTRACT
+
+    def patch(self, patch):
+        """Given a ParsedNodePatch, add the new information to the node."""
+        # explicitly pick out the parts to update so we don't inadvertently
+        # step on the model name or anything
+        self._contents.update({
+            'patch_path': patch.original_file_path,
+            'description': patch.description,
+            'columns': patch.columns,
+            'docrefs': patch.docrefs,
+        })
+        # patches always trigger re-validation
+        self.validate()
 
 
 ARCHIVE_CONFIG_CONTRACT = {
@@ -501,7 +613,7 @@ ARCHIVE_CONFIG_CONTRACT = {
 
 
 PARSED_ARCHIVE_NODE_CONTRACT = deep_merge(
-    PARSED_NODE_CONTRACT,
+    _PARSED_MATERIALIZED_CONTRACT,
     {
         'properties': {
             'config': ARCHIVE_CONFIG_CONTRACT,
@@ -513,8 +625,21 @@ PARSED_ARCHIVE_NODE_CONTRACT = deep_merge(
 )
 
 
-class ParsedArchiveNode(ParsedNode):
+class ParsedArchiveNode(ParsedMaterializedNode):
     SCHEMA = PARSED_ARCHIVE_NODE_CONTRACT
+
+
+PARSED_NODE_CONTRACT = {
+    'oneOf': [
+        PARSED_SEED_CONTRACT,
+        PARSED_TEST_CONTRACT,
+        PARSED_OPERATION_CONTRACT,
+        PARSED_RPC_CONTRACT,
+        PARSED_ANALYSIS_CONTRACT,
+        PARSED_MODEL_CONTRACT,
+        PARSED_ARCHIVE_NODE_CONTRACT,
+    ]
+}
 
 
 # The parsed node update is only the 'patch', not the test. The test became a
@@ -807,3 +932,20 @@ class ParsedSourceDefinition(APIObject):
     @property
     def has_freshness(self):
         return bool(self.freshness) and self.loaded_at_field is not None
+
+
+def make_parsed_node(**kwargs):
+    """A compatibility hack, for now"""
+    _node_types = {
+        NodeType.Model: ParsedModel,
+        NodeType.Seed: ParsedSeed,
+        NodeType.Test: ParsedTest,
+        NodeType.Operation: ParsedOperation,
+        NodeType.RPCCall: ParsedRPC,
+        NodeType.Analysis: ParsedAnalysis,
+    }
+    assert 'resource_type' in kwargs, 'not a compiled node dict!!!'
+    resource_type = kwargs['resource_type']
+    assert resource_type in _node_types, 'unknown type ' + resource_type
+    cls = _node_types[resource_type]
+    return cls(**kwargs)
