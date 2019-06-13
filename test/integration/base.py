@@ -15,7 +15,7 @@ from functools import wraps
 
 import pytest
 import yaml
-from mock import patch
+from unittest.mock import patch
 
 import dbt.main as dbt
 import dbt.flags as flags

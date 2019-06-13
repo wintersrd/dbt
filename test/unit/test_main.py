@@ -1,13 +1,12 @@
 import os
 import tempfile
 import unittest
+from unittest import mock
 
-import mock
 import yaml
 
 from dbt import main
 import dbt.tracking
-import dbt.ui.printer
 
 
 class FakeArgs:

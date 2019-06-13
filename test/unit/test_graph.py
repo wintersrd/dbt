@@ -1,6 +1,6 @@
-from mock import MagicMock, patch
 import os
 import unittest
+from unittest.mock import MagicMock, patch
 
 import dbt.clients.system
 import dbt.compilation

@@ -3,7 +3,7 @@
 Note that all imports should be inside the functions to avoid import/mocking
 issues.
 """
-import mock
+from unittest import mock
 
 
 class Obj:

@@ -1,8 +1,8 @@
 from __future__ import unicode_literals
 import json
 import os
-from datetime import datetime
-from mock import ANY, patch
+from datetime import datetime, timedelta
+from unittest.mock import ANY, patch
 
 from test.integration.base import DBTIntegrationTest, use_profile, AnyFloat, \
     AnyStringWith
