@@ -306,6 +306,35 @@ class TestBlockLexer(unittest.TestCase):
         self.assertEqual(blocks[0].contents, 'select * from "something"."something_else')
         self.assertEqual(blocks[0].block_name, 'my_model')
 
+    def test_nested_endblocks(self):
+        body = '''{% snapshot foo %}
+...
+{# we can't just {% endsnapshot %} here because blah blah blah #}
+...
+{% endsnapshot %}'''
+        all_blocks = extract_toplevel_blocks(body)
+        blocks = [b for b in all_blocks if b.block_type_name != '__dbt__data']
+        self.assertEqual(len(blocks), 1)
+        self.assertEqual(blocks[0].block_type_name, 'snapshot')
+        self.assertEqual(blocks[0].contents, '''
+...
+{# we can't just {% endsnapshot %} here because blah blah blah #}
+...
+''')
+        self.assertEqual(blocks[0].block_name, 'foo')
+
+        body = '''{% macro find_end(end_tag="{% endmacro %}") %}
+...
+{% endmacro %}'''
+        all_blocks = extract_toplevel_blocks(body)
+        blocks = [b for b in all_blocks if b.block_type_name != '__dbt__data']
+        self.assertEqual(len(blocks), 1)
+        self.assertEqual(blocks[0].block_type_name, 'macro')
+        self.assertEqual(blocks[0].contents, '''
+...
+''')
+        self.assertEqual(blocks[0].block_name, 'find_end')
+
 
 bar_block = '''{% mytype bar %}
 {# a comment
