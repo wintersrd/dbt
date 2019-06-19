@@ -22,9 +22,10 @@ class TestStatements(DBTIntegrationTest):
         results = self.run_dbt(["seed"])
         self.assertEqual(len(results), 2)
         results = self.run_dbt()
-        self.assertEqual(len(results), 1)
+        self.assertEqual(len(results), 2)
 
-        self.assertTablesEqual("statement_actual","statement_expected")
+        self.assertTablesEqual("statement_actual", "statement_expected")
+        self.assertTablesEqual("statement_macro", "statement_expected")
 
     @use_profile("snowflake")
     def test_snowflake_statements(self):
@@ -33,9 +34,9 @@ class TestStatements(DBTIntegrationTest):
         results = self.run_dbt(["seed"])
         self.assertEqual(len(results), 2)
         results = self.run_dbt()
-        self.assertEqual(len(results), 1)
+        self.assertEqual(len(results), 2)
 
-        self.assertManyTablesEqual(["STATEMENT_ACTUAL", "STATEMENT_EXPECTED"])
+        self.assertManyTablesEqual(["STATEMENT_ACTUAL", "STATEMENT_EXPECTED", "STATEMENT_MACRO"])
 
     @use_profile("presto")
     def test_presto_statements(self):
@@ -44,9 +45,10 @@ class TestStatements(DBTIntegrationTest):
         results = self.run_dbt(["seed"])
         self.assertEqual(len(results), 2)
         results = self.run_dbt()
-        self.assertEqual(len(results), 1)
+        self.assertEqual(len(results), 2)
 
-        self.assertTablesEqual("statement_actual","statement_expected")
+        self.assertTablesEqual("statement_actual", "statement_expected")
+        self.assertTablesEqual("statement_macro", "statement_expected")
 
 class TestStatementsBigquery(DBTIntegrationTest):
 
@@ -69,7 +71,7 @@ class TestStatementsBigquery(DBTIntegrationTest):
         results = self.run_dbt(["seed"])
         self.assertEqual(len(results), 2)
         results = self.run_dbt()
-        self.assertEqual(len(results), 1)
+        self.assertEqual(len(results), 2)
 
-        self.assertTablesEqual("statement_actual","statement_expected")
-
+        self.assertTablesEqual("statement_actual", "statement_expected")
+        self.assertTablesEqual("statement_macro", "statement_expected")

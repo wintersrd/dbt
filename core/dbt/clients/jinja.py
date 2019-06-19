@@ -12,7 +12,7 @@ import jinja2.sandbox
 import dbt.compat
 import dbt.exceptions
 import dbt.utils
-
+import dbt.flags
 from dbt.clients._jinja_blocks import BlockIterator
 
 from dbt.logger import GLOBAL_LOGGER as logger  # noqa
@@ -224,6 +224,9 @@ def create_macro_capture_env(node):
     return ParserMacroCapture
 
 
+WARNING_CACHE = set()
+
+
 def create_warn_undefined_env(node):
     class WarnUndefined(jinja2.Undefined):
         __slots__ = ('node',)
@@ -233,6 +236,8 @@ def create_warn_undefined_env(node):
             self.node = node
 
         def _fail_or_warn_with_undefined_error(self, *args, **kwargs):
+            if dbt.flags.PARSE_MODE:
+                return
             try:
                 self._fail_with_undefined_error(*args, **kwargs)
             except Exception as exc:
@@ -248,7 +253,10 @@ def create_warn_undefined_env(node):
                             self.node.get('name', 'unknown'),
                             self.node.get('original_file_path')
                         )
-                    logger.warning(msg.format(model_desc, str(exc)))
+                    msg = msg.format(model_desc, str(exc))
+                    if msg not in WARNING_CACHE:
+                        WARNING_CACHE.add(msg)
+                        logger.warning(msg.format(model_desc, str(exc)))
 
         def __eq__(self, other):
             self._fail_or_warn_with_undefined_error(other)
@@ -288,7 +296,7 @@ def create_warn_undefined_env(node):
         __bool__ = __nonzero__
 
         def __repr__(self):
-            return 'Undefined'
+            return 'WarnUndefined'
 
     return WarnUndefined
 
@@ -312,7 +320,6 @@ def get_environment(node=None, capture_macros=False):
 def parse(string):
     try:
         return get_environment().parse(dbt.compat.to_string(string))
-
     except (jinja2.exceptions.TemplateSyntaxError,
             jinja2.exceptions.UndefinedError) as e:
         e.translated = False
@@ -342,11 +349,9 @@ def render_template(template, ctx, node=None):
         dbt.exceptions.raise_compiler_error(str(e), node)
 
 
-def get_rendered(string, ctx, node=None,
-                 capture_macros=False):
+def get_rendered(string, ctx, node=None, capture_macros=False):
     template = get_template(string, ctx, node,
                             capture_macros=capture_macros)
-
     return render_template(template, ctx, node)
 
 

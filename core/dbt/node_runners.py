@@ -300,6 +300,7 @@ class CompileRunner(BaseRunner):
         return compile_node(self.adapter, self.config, self.node, manifest,
                             extra_context)
 
+
 class ModelRunner(CompileRunner):
     def get_node_representation(self):
         if self.config.credentials.database == self.node.database:

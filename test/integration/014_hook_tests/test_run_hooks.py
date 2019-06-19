@@ -46,6 +46,7 @@ class TestPrePostRunHooks(DBTIntegrationTest):
                 "drop table {{ target.schema }}.end_hook_order_test",
                 "create table {{ target.schema }}.schemas ( schema text )",
                 "insert into {{ target.schema }}.schemas values ({% for schema in schemas %}( '{{ schema }}' ){% if not loop.last %},{% endif %}{% endfor %})",
+                "{% for result in results %} {{ log(result) }} {% endfor %}",
             ]
         }
 
@@ -89,6 +90,7 @@ class TestPrePostRunHooks(DBTIntegrationTest):
 
     @use_profile('postgres')
     def test__postgres__pre_and_post_run_hooks(self):
+        self.run_dbt(['compile'])  # test for #1554
         self.run_dbt(['run'])
 
         self.check_hooks('start')

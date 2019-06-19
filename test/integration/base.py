@@ -20,7 +20,7 @@ from mock import patch
 import dbt.main as dbt
 import dbt.flags as flags
 from dbt.adapters.factory import get_adapter, reset_adapters
-from dbt.clients.jinja import template_cache
+from dbt.clients.jinja import template_cache, WARNING_CACHE
 from dbt.config import RuntimeConfig
 from dbt.compat import basestring
 from dbt.context import common
@@ -324,6 +324,7 @@ class DBTIntegrationTest(unittest.TestCase):
         self._created_schemas = set()
         flags.reset()
         template_cache.clear()
+        WARNING_CACHE.clear()
         # disable capturing warnings
         logging.captureWarnings(False)
 
@@ -520,10 +521,6 @@ class DBTIntegrationTest(unittest.TestCase):
         final_args.append('--log-cache-events')
 
         logger.info("Invoking dbt with {}".format(final_args))
-        if args is None:
-            args = ["run"]
-
-        logger.info("Invoking dbt with {}".format(args))
         return dbt.handle_and_check(final_args)
 
     def run_sql_file(self, path, kwargs=None):
@@ -546,7 +543,6 @@ class DBTIntegrationTest(unittest.TestCase):
         if kwargs is None:
             kwargs = {}
         base_kwargs.update(kwargs)
-
 
         to_return = to_return.format(**base_kwargs)
 

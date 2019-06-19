@@ -8,7 +8,6 @@ import dbt.flags
 from dbt.node_types import NodeType
 from dbt.contracts.graph.manifest import Manifest
 from dbt.utils import timestring
-
 from dbt.parser import MacroParser, ModelParser, SeedParser, AnalysisParser, \
     DocumentationParser, DataTestParser, HookParser, SchemaParser, \
     ParserUtils, SnapshotParser
@@ -160,7 +159,8 @@ class GraphLoader(object):
             ProjectList(**projects)
 
         loader = cls(root_config, projects)
-        loader.load(internal_manifest=internal_manifest)
+        with dbt.flags.parse_context():
+            loader.load(internal_manifest=internal_manifest)
         return loader.create_manifest()
 
     @classmethod

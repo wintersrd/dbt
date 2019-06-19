@@ -173,25 +173,32 @@ def env_var(var, default=None):
         dbt.clients.jinja.undefined_error(msg)
 
 
+def _make_result(status, agate_table):
+    if agate_table is None:
+        agate_table = dbt.clients.agate_helper.empty_table()
+
+    return dbt.utils.AttrDict({
+        'status': status,
+        'data': dbt.clients.agate_helper.as_matrix(agate_table),
+        'table': agate_table
+    })
+
+
 def _store_result(sql_results):
     def call(name, status, agate_table=None):
-        if agate_table is None:
-            agate_table = dbt.clients.agate_helper.empty_table()
-
-        sql_results[name] = dbt.utils.AttrDict({
-            'status': status,
-            'data': dbt.clients.agate_helper.as_matrix(agate_table),
-            'table': agate_table
-        })
+        sql_results[name] = _make_result(status, agate_table)
         return ''
 
     return call
 
 
-def _load_result(sql_results):
+def _load_result(sql_results, context):
     def call(name):
-        return sql_results.get(name)
-
+        if name in sql_results or context.get('execute'):
+            return sql_results.get(name)
+        else:
+            # we must be in parsing mode
+            return _make_result('', None)
     return call
 
 
@@ -200,7 +207,7 @@ def _add_sql_handlers(context):
     return dbt.utils.merge(context, {
         '_sql_results': sql_results,
         'store_result': _store_result(sql_results),
-        'load_result': _load_result(sql_results),
+        'load_result': _load_result(sql_results, context),
     })
 
 
