@@ -294,8 +294,11 @@ class CompileRunner(BaseRunner):
         return RunModelResult(compiled_node)
 
     def compile(self, manifest):
-        return compile_node(self.adapter, self.config, self.node, manifest, {})
-
+        extra_context = {}
+        if self.node.resource_type == NodeType.Operation:
+            extra_context = {'schemas': [], 'results': []}
+        return compile_node(self.adapter, self.config, self.node, manifest,
+                            extra_context)
 
 class ModelRunner(CompileRunner):
     def get_node_representation(self):
