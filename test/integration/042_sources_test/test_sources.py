@@ -383,6 +383,25 @@ select 1 as id
 )select * from __dbt__CTE__ephemeral_model'''
 
 
+_macro_with_load_result_text = '''
+{% macro test_macros(rel) %}
+    {%- call statement('test_stmt', fetch_result=True) -%}
+        select count(*) as num_records from {{ rel }}
+    {%- endcall -%}
+    {%- set result = load_result('test_stmt') -%}
+    {%- set res_table = result['table'] -%}
+    {%- if execute and (res_table | length == 0) -%}
+        {{ exceptions.raise_compiler_error('no data in table' ~ (rel | string)) }}
+    {%- endif -%}
+    {%- for result in res_table -%}
+        select {{ result['num_records'] }} as value
+        {{ "" if loop.last else "union all" }}
+    {%- endfor -%}
+{%- endmacro -%}
+{{ test_macros(ref("other_table")) }}
+'''.strip()
+
+
 def addr_in_use(err, *args):
     msg = str(err)
     if 'Address already in use' in msg:
@@ -738,6 +757,18 @@ class TestRPCServer(BaseSourcesTest):
             raw_sql='select * from {{ ref("ephemeral_model") }}',
             compiled_sql=_select_from_ephemeral,
             table={'column_names': ['id'], 'rows': [[1.0]]}
+        )
+
+        macro_with_load_result = self.query(
+            'run',
+            _macro_with_load_result_text,
+            name='foo'
+        ).json()
+        self.assertSuccessfulRunResult(
+            macro_with_load_result,
+            raw_sql='{{ test_macros(ref("other_table")) }}',
+            compiled_sql='select 3 as value\n        ',
+            table={'column_names': ['value'], 'rows': [[3.0]]}
         )
 
     @mark.skipif(os.name == 'nt', reason='"kill" not supported on windows')

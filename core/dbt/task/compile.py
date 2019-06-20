@@ -11,6 +11,7 @@ from dbt.node_types import NodeType
 from dbt.parser.analysis import RPCCallParser
 from dbt.parser.macros import MacroParser
 from dbt.parser.util import ParserUtils
+import dbt.flags
 import dbt.ui.printer
 from dbt.logger import RPC_LOGGER as rpc_logger
 
@@ -77,14 +78,15 @@ class RemoteCompileTask(CompileTask, RemoteCallable):
         sql, macros = self._extract_request_data(sql)
 
         if macros:
-            macro_parser = MacroParser(self.config, all_projects)
-            macro_overrides.update(macro_parser.parse_macro_file(
-                macro_file_path='from remote system',
-                macro_file_contents=macros,
-                root_path=request_path,
-                package_name=self.config.project_name,
-                resource_type=NodeType.Macro
-            ))
+            with dbt.flags.parse_context():
+                macro_parser = MacroParser(self.config, all_projects)
+                macro_overrides.update(macro_parser.parse_macro_file(
+                    macro_file_path='from remote system',
+                    macro_file_contents=macros,
+                    root_path=request_path,
+                    package_name=self.config.project_name,
+                    resource_type=NodeType.Macro
+                ))
 
         self._base_manifest.macros.update(macro_overrides)
         rpc_parser = RPCCallParser(
@@ -103,13 +105,14 @@ class RemoteCompileTask(CompileTask, RemoteCallable):
             'raw_sql': sql,
         }
 
-        unique_id, node = rpc_parser.parse_sql_node(node_dict)
-        self.manifest = ParserUtils.add_new_refs(
-            manifest=self._base_manifest,
-            current_project=self.config,
-            node=node,
-            macros=macro_overrides
-        )
+        with dbt.flags.parse_context():
+            unique_id, node = rpc_parser.parse_sql_node(node_dict)
+            self.manifest = ParserUtils.add_new_refs(
+                manifest=self._base_manifest,
+                current_project=self.config,
+                node=node,
+                macros=macro_overrides
+            )
 
         # don't write our new, weird manifest!
         self.linker = compile_manifest(self.config, self.manifest, write=False)
