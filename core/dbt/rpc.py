@@ -21,7 +21,6 @@ from dbt.compat import QueueEmpty
 from dbt import flags
 from dbt.logger import RPC_LOGGER as logger
 from dbt.logger import add_queue_handler
-from dbt.clients.jinja import WARNING_CACHE
 import dbt.exceptions
 
 
@@ -143,8 +142,6 @@ def _nt_setup(config, args):
     """
     # reset flags
     flags.set_from_args(args)
-    # reset the warning cache
-    WARNING_CACHE.clear()
     # reload the active plugin
     load_plugin(config.credentials.type)
 

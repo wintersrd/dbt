@@ -2,7 +2,7 @@
     {%- call statement('test_stmt', fetch_result=True) %}
 
       select
-        count(*) as "num_records"
+        count(*) as {{ adapter.quote("num_records") }}
 
       from {{ relation }}
 
