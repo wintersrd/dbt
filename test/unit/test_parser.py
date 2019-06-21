@@ -6,7 +6,7 @@ import yaml
 
 import dbt.flags
 import dbt.parser
-from dbt.parser import ModelParser, MacroParser, DataTestParser, SchemaParser
+from dbt.parser import ModelParser, MacroParser, DataTestParser, SchemaParser, ParserUtils
 from dbt.parser.source_config import SourceConfig
 from dbt.utils import timestring, deep_merge
 
