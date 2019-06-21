@@ -10,7 +10,7 @@ import dbt.tracking
 import dbt.ui.printer
 
 
-class FakeArgs(object):
+class FakeArgs:
     def __init__(self, profiles_dir):
         self.profiles_dir = profiles_dir
         self.profile = 'test'

@@ -6,7 +6,7 @@ issues.
 import mock
 
 
-class Obj(object):
+class Obj:
     which = 'blah'
 
 
