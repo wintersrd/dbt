@@ -1,6 +1,7 @@
 import re
 from io import StringIO
 from contextlib import contextmanager
+from typing import ContextManager, Tuple, Any, List, Optional, Dict
 
 import snowflake.connector
 import snowflake.connector.errors
@@ -10,6 +11,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from dbt.adapters.base import Credentials
 from dbt.adapters.sql import SQLConnectionManager
+from dbt.contracts.connection import Connection
 from dbt.logger import GLOBAL_LOGGER as logger
 
 
@@ -60,18 +62,18 @@ class SnowflakeCredentials(Credentials):
     SCHEMA = SNOWFLAKE_CREDENTIALS_CONTRACT
 
     @property
-    def type(self):
+    def type(self) -> str:
         return 'snowflake'
 
-    def _connection_keys(self):
+    def _connection_keys(self) -> Tuple[str]:
         return ('account', 'user', 'database', 'schema', 'warehouse', 'role')
 
 
 class SnowflakeConnectionManager(SQLConnectionManager):
-    TYPE = 'snowflake'
+    TYPE: str = 'snowflake'
 
     @contextmanager
-    def exception_handler(self, sql):
+    def exception_handler(self, sql: str) -> ContextManager:
         try:
             yield
         except snowflake.connector.errors.ProgrammingError as e:
@@ -104,7 +106,7 @@ class SnowflakeConnectionManager(SQLConnectionManager):
             raise dbt.exceptions.RuntimeException(e.msg)
 
     @classmethod
-    def open(cls, connection):
+    def open(cls, connection: Connection) -> Connection:
         if connection.state == 'open':
             logger.debug('Connection is already open, skipping open.')
             return connection
@@ -145,7 +147,7 @@ class SnowflakeConnectionManager(SQLConnectionManager):
 
             raise dbt.exceptions.FailedToConnectException(str(e))
 
-    def cancel(self, connection):
+    def cancel(self, connection: Connection) -> Connection:
         handle = connection.handle
         sid = handle.session_id
 
@@ -161,7 +163,7 @@ class SnowflakeConnectionManager(SQLConnectionManager):
         logger.debug("Cancel query '{}': {}".format(connection_name, res))
 
     @classmethod
-    def get_status(cls, cursor):
+    def get_status(cls, cursor: Any) -> str:
         state = cursor.sqlstate
 
         if state is None:
@@ -170,7 +172,7 @@ class SnowflakeConnectionManager(SQLConnectionManager):
         return "{} {}".format(state, cursor.rowcount)
 
     @classmethod
-    def _split_queries(cls, sql):
+    def _split_queries(cls, sql: str) -> List[str]:
         "Splits sql statements at semicolons into discrete queries"
 
         sql_s = str(sql)
@@ -179,7 +181,8 @@ class SnowflakeConnectionManager(SQLConnectionManager):
         return [part[0] for part in split_query]
 
     @classmethod
-    def _get_private_key(cls, private_key_path, private_key_passphrase):
+    def _get_private_key(cls, private_key_path: str, private_key_passphrase: str
+                         ) -> Optional[bytes]:
         """Get Snowflake private key by path or None."""
         if private_key_path is None or private_key_passphrase is None:
             return None
@@ -195,8 +198,9 @@ class SnowflakeConnectionManager(SQLConnectionManager):
             format=serialization.PrivateFormat.PKCS8,
             encryption_algorithm=serialization.NoEncryption())
 
-    def add_query(self, sql, auto_begin=True,
-                  bindings=None, abridge_sql_log=False):
+    def add_query(self, sql: str, auto_begin: bool = True,
+                  bindings: Optional[Dict[str, Any]] = None,
+                  abridge_sql_log: bool = False) -> Tuple[Connection, Any]:
 
         connection = None
         cursor = None
@@ -237,7 +241,7 @@ class SnowflakeConnectionManager(SQLConnectionManager):
         return connection, cursor
 
     @classmethod
-    def _rollback_handle(cls, connection):
+    def _rollback_handle(cls, connection: Connection):
         """On snowflake, rolling back the handle of an aborted session raises
         an exception.
         """

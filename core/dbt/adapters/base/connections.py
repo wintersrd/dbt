@@ -2,6 +2,8 @@ import abc
 import multiprocessing
 import os
 from threading import get_ident
+from typing import Optional, Hashable, ContextManager, Tuple, Generator, Any, \
+    Dict
 
 import dbt.exceptions
 import dbt.flags
@@ -10,6 +12,8 @@ from dbt.contracts.connection import Connection
 from dbt.logger import GLOBAL_LOGGER as logger
 from dbt.utils import translate_aliases
 
+import agate
+
 
 class Credentials(APIObject):
     """Common base class for credentials. This is not valid to instantiate"""
@@ -17,37 +21,37 @@ class Credentials(APIObject):
     # map credential aliases to their canonical names.
     ALIASES = {}
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         renamed = self.translate_aliases(kwargs)
         super().__init__(**renamed)
 
     @property
-    def type(self):
+    def type(self) -> str:
         raise NotImplementedError(
             'type not implemented for base credentials class'
         )
 
-    def connection_info(self):
+    def connection_info(self) -> Generator[Tuple[str, Any]]:
         """Return an ordered iterator of key/value pairs for pretty-printing.
         """
         for key in self._connection_keys():
             if key in self._contents:
                 yield key, self._contents[key]
 
-    def _connection_keys(self):
+    def _connection_keys(self) -> Tuple[str]:
         """The credential object keys that should be printed to users in
         'dbt debug' output. This is specific to each adapter.
         """
         raise NotImplementedError
 
-    def incorporate(self, **kwargs):
+    def incorporate(self, **kwargs) -> 'Credentials':
         # implementation note: we have to do this here, or
         # incorporate(alias_name=...) will result in duplicate keys in the
         # merged dict that APIObject.incorporate() creates.
         renamed = self.translate_aliases(kwargs)
         return super().incorporate(**renamed)
 
-    def serialize(self, with_aliases=False):
+    def serialize(self, with_aliases=False) -> Dict[str, Any]:
         serialized = super().serialize()
         if with_aliases:
             serialized.update({
@@ -58,7 +62,7 @@ class Credentials(APIObject):
         return serialized
 
     @classmethod
-    def translate_aliases(cls, kwargs):
+    def translate_aliases(cls, kwargs) -> Dict[str, Any]:
         return translate_aliases(kwargs, cls.ALIASES)
 
 
@@ -75,20 +79,20 @@ class BaseConnectionManager(metaclass=abc.ABCMeta):
     You must also set the 'TYPE' class attribute with a class-unique constant
     string.
     """
-    TYPE = NotImplemented
+    TYPE: str = NotImplemented
 
-    def __init__(self, profile):
+    def __init__(self, profile) -> None:
         self.profile = profile
         self.thread_connections = {}
         self.lock = multiprocessing.RLock()
 
     @staticmethod
-    def get_thread_identifier():
+    def get_thread_identifier() -> Hashable:
         # note that get_ident() may be re-used, but we should never experience
         # that within a single process
         return (os.getpid(), get_ident())
 
-    def get_thread_connection(self):
+    def get_thread_connection(self) -> Connection:
         key = self.get_thread_identifier()
         with self.lock:
             if key not in self.thread_connections:
@@ -98,18 +102,18 @@ class BaseConnectionManager(metaclass=abc.ABCMeta):
                 )
             return self.thread_connections[key]
 
-    def get_if_exists(self):
+    def get_if_exists(self) -> Optional[Connection]:
         key = self.get_thread_identifier()
         with self.lock:
             return self.thread_connections.get(key)
 
-    def clear_thread_connection(self):
+    def clear_thread_connection(self) -> None:
         key = self.get_thread_identifier()
         with self.lock:
             if key in self.thread_connections:
                 del self.thread_connections[key]
 
-    def clear_transaction(self):
+    def clear_transaction(self) -> None:
         """Clear any existing transactions."""
         conn = self.get_thread_connection()
         if conn is not None:
@@ -119,11 +123,11 @@ class BaseConnectionManager(metaclass=abc.ABCMeta):
             self.commit()
 
     @abc.abstractmethod
-    def exception_handler(self, sql):
+    def exception_handler(self, sql: str) -> ContextManager:
         """Create a context manager that handles exceptions caused by database
         interactions.
 
-        :param str sql: The SQL string that the block inside the context
+        :param sql: The SQL string that the block inside the context
             manager is executing.
         :return: A context manager that handles exceptions raised by the
             underlying database.
@@ -131,7 +135,7 @@ class BaseConnectionManager(metaclass=abc.ABCMeta):
         raise dbt.exceptions.NotImplementedException(
             '`exception_handler` is not implemented for this adapter!')
 
-    def set_connection_name(self, name=None):
+    def set_connection_name(self, name: Optional[str] = None) -> Connection:
         if name is None:
             # if a name isn't specified, we'll re-use a single handle
             # named 'master'
@@ -170,14 +174,14 @@ class BaseConnectionManager(metaclass=abc.ABCMeta):
         return conn
 
     @abc.abstractmethod
-    def cancel_open(self):
+    def cancel_open(self) -> None:
         """Cancel all open connections on the adapter. (passable)"""
         raise dbt.exceptions.NotImplementedException(
             '`cancel_open` is not implemented for this adapter!'
         )
 
     @abc.abstractclassmethod
-    def open(cls, connection):
+    def open(cls, connection: Connection) -> Connection:
         """Open a connection on the adapter.
 
         This may mutate the given connection (in particular, its state and its
@@ -186,15 +190,14 @@ class BaseConnectionManager(metaclass=abc.ABCMeta):
         This should be thread-safe, or hold the lock if necessary. The given
         connection should not be in either in_use or available.
 
-        :param Connection connection: A connection object to open.
+        :param connection: A connection object to open.
         :return: A connection with a handle attached and an 'open' state.
-        :rtype: Connection
         """
         raise dbt.exceptions.NotImplementedException(
             '`open` is not implemented for this adapter!'
         )
 
-    def release(self):
+    def release(self) -> None:
         with self.lock:
             conn = self.get_if_exists()
             if conn is None:
@@ -211,7 +214,7 @@ class BaseConnectionManager(metaclass=abc.ABCMeta):
             self.clear_thread_connection()
             raise
 
-    def cleanup_all(self):
+    def cleanup_all(self) -> None:
         with self.lock:
             for connection in self.thread_connections.values():
                 if connection.state not in {'closed', 'init'}:
@@ -226,29 +229,27 @@ class BaseConnectionManager(metaclass=abc.ABCMeta):
             self.thread_connections.clear()
 
     @abc.abstractmethod
-    def begin(self):
+    def begin(self) -> None:
         """Begin a transaction. (passable)
-
-        :param str name: The name of the connection to use.
         """
         raise dbt.exceptions.NotImplementedException(
             '`begin` is not implemented for this adapter!'
         )
 
     @abc.abstractmethod
-    def commit(self):
+    def commit(self) -> None:
         """Commit a transaction. (passable)"""
         raise dbt.exceptions.NotImplementedException(
             '`commit` is not implemented for this adapter!'
         )
 
     @classmethod
-    def _rollback_handle(cls, connection):
+    def _rollback_handle(cls, connection) -> None:
         """Perform the actual rollback operation."""
         connection.handle.rollback()
 
     @classmethod
-    def _close_handle(cls, connection):
+    def _close_handle(cls, connection: Connection) -> None:
         """Perform the actual close operation."""
         # On windows, sometimes connection handles don't have a close() attr.
         if hasattr(connection.handle, 'close'):
@@ -259,7 +260,7 @@ class BaseConnectionManager(metaclass=abc.ABCMeta):
                          .format(connection.name))
 
     @classmethod
-    def _rollback(cls, connection):
+    def _rollback(cls, connection: Connection) -> Connection:
         """Roll back the given connection.
         """
         if dbt.flags.STRICT_MODE:
@@ -278,7 +279,7 @@ class BaseConnectionManager(metaclass=abc.ABCMeta):
         return connection
 
     @classmethod
-    def close(cls, connection):
+    def close(cls, connection: Connection) -> Connection:
         if dbt.flags.STRICT_MODE:
             assert isinstance(connection, Connection)
 
@@ -295,25 +296,23 @@ class BaseConnectionManager(metaclass=abc.ABCMeta):
 
         return connection
 
-    def commit_if_has_connection(self):
-        """If the named connection exists, commit the current transaction.
-
-        :param str name: The name of the connection to use.
+    def commit_if_has_connection(self) -> None:
+        """If there is a connection, commit the current transaction.
         """
         connection = self.get_if_exists()
         if connection:
             self.commit()
 
     @abc.abstractmethod
-    def execute(self, sql, auto_begin=False, fetch=False):
+    def execute(self, sql: str, auto_begin: bool = False, fetch: bool = False
+                ) -> Tuple[str, agate.Table]:
         """Execute the given SQL.
 
-        :param str sql: The sql to execute.
-        :param bool auto_begin: If set, and dbt is not currently inside a
+        :param sql: The sql to execute.
+        :param auto_begin: If set, and dbt is not currently inside a
             transaction, automatically begin one.
-        :param bool fetch: If set, fetch results.
+        :param fetch: If set, fetch results.
         :return: A tuple of the status and the results (empty if fetch=False).
-        :rtype: Tuple[str, agate.Table]
         """
         raise dbt.exceptions.NotImplementedException(
             '`execute` is not implemented for this adapter!'

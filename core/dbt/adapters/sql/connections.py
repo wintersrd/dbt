@@ -1,5 +1,6 @@
 import abc
 import time
+from typing import List, Optional, Dict, Tuple
 
 import dbt.clients.agate_helper
 import dbt.exceptions
@@ -7,6 +8,7 @@ from dbt.contracts.connection import Connection
 from dbt.adapters.base import BaseConnectionManager
 from dbt.logger import GLOBAL_LOGGER as logger
 
+import agate
 
 class SQLConnectionManager(BaseConnectionManager):
     """The default connection manager with some common SQL methods implemented.
@@ -18,7 +20,7 @@ class SQLConnectionManager(BaseConnectionManager):
         - open
     """
     @abc.abstractmethod
-    def cancel(self, connection):
+    def cancel(self, connection: Connection) -> None:
         """Cancel the given connection.
 
         :param Connection connection: The connection to cancel.
@@ -27,7 +29,7 @@ class SQLConnectionManager(BaseConnectionManager):
             '`cancel` is not implemented for this adapter!'
         )
 
-    def cancel_open(self):
+    def cancel_open(self) -> List[str]:
         names = []
         this_connection = self.get_if_exists()
         with self.lock:
@@ -39,8 +41,9 @@ class SQLConnectionManager(BaseConnectionManager):
                 names.append(connection.name)
         return names
 
-    def add_query(self, sql, auto_begin=True, bindings=None,
-                  abridge_sql_log=False):
+    def add_query(self, sql: str, auto_begin: bool = True,
+                  bindings: Optional[Dict] = None,
+                  abridge_sql_log: bool = False) -> Tuple[Connection, object]:
         connection = self.get_thread_connection()
         if auto_begin and connection.transaction_open is False:
             self.begin()
@@ -64,19 +67,18 @@ class SQLConnectionManager(BaseConnectionManager):
             return connection, cursor
 
     @abc.abstractclassmethod
-    def get_status(cls, cursor):
+    def get_status(cls, cursor: object) -> str:
         """Get the status of the cursor.
 
         :param cursor: A database handle to get status from
         :return: The current status
-        :rtype: str
         """
         raise dbt.exceptions.NotImplementedException(
             '`get_status` is not implemented for this adapter!'
         )
 
     @classmethod
-    def get_result_from_cursor(cls, cursor):
+    def get_result_from_cursor(cls, cursor: object) -> agate.Table:
         data = []
         column_names = []
 
@@ -88,7 +90,8 @@ class SQLConnectionManager(BaseConnectionManager):
 
         return dbt.clients.agate_helper.table_from_data(data, column_names)
 
-    def execute(self, sql, auto_begin=False, fetch=False):
+    def execute(self, sql: str, auto_begin: bool = False, fetch: bool = False
+                ) -> Tuple[str, agate.Table]:
         _, cursor = self.add_query(sql, auto_begin)
         status = self.get_status(cursor)
         if fetch:
@@ -97,13 +100,13 @@ class SQLConnectionManager(BaseConnectionManager):
             table = dbt.clients.agate_helper.empty_table()
         return status, table
 
-    def add_begin_query(self):
+    def add_begin_query(self) -> Tuple[Connection, object]:
         return self.add_query('BEGIN', auto_begin=False)
 
-    def add_commit_query(self):
+    def add_commit_query(self) -> Tuple[Connection, object]:
         return self.add_query('COMMIT', auto_begin=False)
 
-    def begin(self):
+    def begin(self) -> Connection:
         connection = self.get_thread_connection()
 
         if dbt.flags.STRICT_MODE:
@@ -119,7 +122,7 @@ class SQLConnectionManager(BaseConnectionManager):
         connection.transaction_open = True
         return connection
 
-    def commit(self):
+    def commit(self) -> Connection:
         connection = self.get_thread_connection()
         if dbt.flags.STRICT_MODE:
             assert isinstance(connection, Connection)

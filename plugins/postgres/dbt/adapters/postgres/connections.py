@@ -1,10 +1,12 @@
 from contextlib import contextmanager
+from typing import ContextManager
 
 import psycopg2
 
 import dbt.exceptions
 from dbt.adapters.base import Credentials
 from dbt.adapters.sql import SQLConnectionManager
+from dbt.contracts.connection import Connection
 from dbt.logger import GLOBAL_LOGGER as logger
 
 
@@ -63,7 +65,7 @@ class PostgresConnectionManager(SQLConnectionManager):
     TYPE = 'postgres'
 
     @contextmanager
-    def exception_handler(self, sql):
+    def exception_handler(self, sql: str) -> ContextManager:
         try:
             yield
 
@@ -92,7 +94,7 @@ class PostgresConnectionManager(SQLConnectionManager):
             raise dbt.exceptions.RuntimeException(e)
 
     @classmethod
-    def open(cls, connection):
+    def open(cls, connection: Connection) -> Connection:
         if connection.state == 'open':
             logger.debug('Connection is already open, skipping open.')
             return connection
@@ -138,7 +140,7 @@ class PostgresConnectionManager(SQLConnectionManager):
 
         return connection
 
-    def cancel(self, connection):
+    def cancel(self, connection: Connection) -> Connection:
         connection_name = connection.name
         pid = connection.handle.get_backend_pid()
 
@@ -152,9 +154,10 @@ class PostgresConnectionManager(SQLConnectionManager):
         logger.debug("Cancel query '{}': {}".format(connection_name, res))
 
     @classmethod
-    def get_credentials(cls, credentials):
+    def get_credentials(cls, credentials: PostgresCredentials
+                        ) -> PostgresCredentials:
         return credentials
 
     @classmethod
-    def get_status(cls, cursor):
+    def get_status(cls, cursor: object) -> str:
         return cursor.statusmessage

@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import multiprocessing
+from typing import Optional, Tuple, Any, ContextManager
 
 from dbt.adapters.postgres import PostgresConnectionManager
 from dbt.adapters.postgres import PostgresCredentials
@@ -68,15 +69,15 @@ REDSHIFT_CREDENTIALS_CONTRACT = {
 class RedshiftCredentials(PostgresCredentials):
     SCHEMA = REDSHIFT_CREDENTIALS_CONTRACT
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         kwargs.setdefault('method', 'database')
         super().__init__(*args, **kwargs)
 
     @property
-    def type(self):
+    def type(self) -> str:
         return 'redshift'
 
-    def _connection_keys(self):
+    def _connection_keys(self) -> Tuple[str]:
         return (
             'host', 'port', 'user', 'database', 'schema', 'method',
             'search_path')
@@ -87,7 +88,7 @@ class RedshiftConnectionManager(PostgresConnectionManager):
     TYPE = 'redshift'
 
     @contextmanager
-    def fresh_transaction(self, name=None):
+    def fresh_transaction(self, name: Optional[str] = None) -> ContextManager:
         """On entrance to this context manager, hold an exclusive lock and
         create a fresh transaction for redshift, then commit and begin a new
         one before releasing the lock on exit.
@@ -110,8 +111,8 @@ class RedshiftConnectionManager(PostgresConnectionManager):
             self.begin()
 
     @classmethod
-    def fetch_cluster_credentials(cls, db_user, db_name, cluster_id,
-                                  duration_s):
+    def fetch_cluster_credentials(cls, db_user: str, db_name: str,
+                                  cluster_id: str, duration_s: int) -> Any:
         """Fetches temporary login credentials from AWS. The specified user
         must already exist in the database, or else an error will occur"""
         boto_client = boto3.client('redshift')
@@ -130,7 +131,8 @@ class RedshiftConnectionManager(PostgresConnectionManager):
                 .format(e))
 
     @classmethod
-    def get_tmp_iam_cluster_credentials(cls, credentials):
+    def get_tmp_iam_cluster_credentials(cls, credentials: RedshiftCredentials
+                                        ) -> RedshiftCredentials:
         cluster_id = credentials.get('cluster_id')
 
         # default via:
@@ -156,7 +158,8 @@ class RedshiftConnectionManager(PostgresConnectionManager):
         )
 
     @classmethod
-    def get_credentials(cls, credentials):
+    def get_credentials(cls, credentials: RedshiftCredentials
+                        ) -> RedshiftCredentials:
         method = credentials.method
 
         # Support missing 'method' for backwards compatibility
