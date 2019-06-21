@@ -23,10 +23,12 @@ ENV PYENV_ROOT="/home/dbt_test_user/.pyenv" \
     PATH="/home/dbt_test_user/.pyenv/bin:/home/dbt_test_user/.pyenv/shims:$PATH"
 
 RUN pyenv update && \
-    echo "3.6.8 3.7.3" | xargs -P 4 -n 1 pyenv install && \
+    echo "2.7.16 3.6.8 3.7.3" | xargs -P 4 -n 1 pyenv install && \
     pyenv global $(pyenv versions --bare)
 
-RUN pyenv virtualenv 3.6.8 dbt36 && pyenv virtualenv 3.7.3 dbt37
+RUN pyenv virtualenv 3.6.8 dbt36 && \
+    pyenv virtualenv 3.7.3 dbt37 && \
+    pyenv virtualenv 2.7.16 dbt27
 
 RUN cd /usr/app && pyenv local dbt37 && \
     python -m pip install -U pip && \
