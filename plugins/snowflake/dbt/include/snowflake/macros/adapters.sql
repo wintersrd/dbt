@@ -1,14 +1,25 @@
 {% macro snowflake__create_table_as(temporary, relation, sql) -%}
   {%- set transient = config.get('transient', default=true) -%}
-
+  {%- set cluster_by_keys = config.get('cluster_by') -%}
+  {# {%- set is_incremental = (config.get('materialization') == 'incremental' and cluster_by_keys is not none) -%} #}
+  {{log("cluster by keys: {{cluster_by_keys}}")}}
+  {%- endif -%}
   create or replace {% if temporary -%}
     temporary
-  {%- elif transient -%}
-    transient
+  {# {%- elif transient -%} #}
+    {# transient #}
   {%- endif %} table {{ relation }}
   as (
-    {{ sql }}
+    {# {%- if cluster_by_keys is not none -%} #}
+      select * from( {{ sql }} ) order by ({{ cluster_by_keys }})
+    {# {%- else -%} #}
+      {# {{ sql }} #}
+    {# {%- endif -%} #}
   );
+{# if materialisation is incremental configure autoclustering on clustering keys #}
+  {%- if is_incremental and cluster_by_keys -%}
+  alter table {{ relation }} cluster by ( {{ cluster_by_keys }})
+  {%- endif -%}
 {% endmacro %}
 
 {% macro snowflake__create_view_as(relation, sql) -%}
