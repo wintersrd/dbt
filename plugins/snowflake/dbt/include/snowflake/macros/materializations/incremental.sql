@@ -5,6 +5,7 @@
   {%- set full_refresh_mode = (flags.FULL_REFRESH == True) -%}
   {%- set identifier = model['alias'] -%}
 
+  {# TODO: Make sure we can support a list of keys down the line #}
   {%- set cluster_by_keys = config.get('cluster_by') -%}
 
   {%- set old_relation = adapter.get_relation(database=database, schema=schema, identifier=identifier) -%}
