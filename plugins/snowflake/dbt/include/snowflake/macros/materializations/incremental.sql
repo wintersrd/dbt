@@ -5,6 +5,8 @@
   {%- set full_refresh_mode = (flags.FULL_REFRESH == True) -%}
   {%- set identifier = model['alias'] -%}
 
+  {%- set cluster_by_keys = config.get('cluster_by') -%}
+
   {%- set old_relation = adapter.get_relation(database=database, schema=schema, identifier=identifier) -%}
   {%- set target_relation = api.Relation.create(database=database,
                                                 schema=schema,
@@ -42,7 +44,13 @@
 
     {%- call statement('main') -%}
       {{ create_table_as(false, target_relation, sql) }}
+
+      {%- if cluster_by_keys is not none -%}
+        {{snowflake__alter_cluster(target_relation, sql)}}
+      {%- endif -%}
+
     {%- endcall -%}
+
 
   {%- else -%}
 
