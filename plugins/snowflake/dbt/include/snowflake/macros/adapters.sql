@@ -1,5 +1,6 @@
 {% macro snowflake__create_table_as(temporary, relation, sql) -%}
   {%- set transient = config.get('transient', default=true) -%}
+  {# TODO: Add support for more than one keys #}
   {%- set cluster_by_keys = config.get('cluster_by') -%}
 
   create or replace {% if temporary -%}
@@ -19,6 +20,7 @@
 {% endmacro %}
 
 {% macro snowflake__alter_cluster(relation, sql) -%}
+  {# TODO: Add support for more than one keys #}
   {%- set cluster_by_keys = config.get('cluster_by') -%}
     alter table {{relation}} cluster by ({{cluster_by_keys}})
 {% endmacro %}

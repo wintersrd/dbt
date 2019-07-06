@@ -46,6 +46,7 @@
       {{ create_table_as(false, target_relation, sql) }}
 
       {%- if cluster_by_keys is not none -%}
+      {# FIXME: Not sure this is the most elegant thing to do... #}
         {{snowflake__alter_cluster(target_relation, sql)}}
       {%- endif -%}
 
