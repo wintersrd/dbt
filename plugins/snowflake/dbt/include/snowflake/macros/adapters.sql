@@ -10,7 +10,9 @@
   {%- endif %} table {{ relation }}
   as (
     {%- if cluster_by_keys is not none -%}
-      select * from( {{ sql }} ) order by ({{ cluster_by_keys }})
+      select * from(
+        {{ sql }}
+        ) order by ({{ cluster_by_keys }})
     {%- else -%}
       {{ sql }}
     {%- endif -%}
