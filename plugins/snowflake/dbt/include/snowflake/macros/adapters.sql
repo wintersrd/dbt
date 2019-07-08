@@ -2,29 +2,32 @@
   {%- set transient = config.get('transient', default=true) -%}
   {# TODO: Add support for more than one keys #}
   {%- set cluster_by_keys = config.get('cluster_by') -%}
+  {%- set is_incremental = config.get('materialized') == 'incremental' -%}
+  {%- if cluster_by_keys is not string and cluster_by_keys is not none -%}
+    {%-  set cluster_by_keys = cluster_by_keys|join(", ") -%}
+  {%- endif -%}
 
-  create or replace {% if temporary -%}
-    temporary
-  {%- elif transient -%}
-    transient
-  {%- endif %} table {{ relation }}
-  as (
-    {%- if cluster_by_keys is not none -%}
-      select * from(
-        {{ sql }}
-        ) order by ({{ cluster_by_keys }})
-    {%- else -%}
-      {{ sql }}
-    {%- endif -%}
-  );
+      create or replace {% if temporary -%}
+        temporary
+      {%- elif transient -%}
+        transient
+      {%- endif %} table {{ relation }}
+      as (
+        {%- if cluster_by_keys is not none -%}
+          select * from(
+            {{ sql }}
+            ) order by ({{ cluster_by_keys }})
+        {%- else -%}
+          {{ sql }}
+        {%- endif %}
+      );
+    {% if cluster_by_keys is not none and is_incremental -%}
+      alter table {{relation}} cluster by ({{cluster_by_keys}});
+      alter table {{relation}} resume recluster;
+  {%- endif -%}
 
 
-{% endmacro %}
 
-{% macro snowflake__alter_cluster(relation, sql) -%}
-  {# TODO: Add support for more than one keys #}
-  {%- set cluster_by_keys = config.get('cluster_by') -%}
-    alter table {{relation}} cluster by ({{cluster_by_keys}})
 {% endmacro %}
 
 {% macro snowflake__create_view_as(relation, sql) -%}
