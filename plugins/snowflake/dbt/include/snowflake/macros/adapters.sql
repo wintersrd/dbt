@@ -2,7 +2,6 @@
   {%- set transient = config.get('transient', default=true) -%}
   {%- set cluster_by_keys = config.get('cluster_by', default=none) -%}
   {%- set enable_automatic_clustering = config.get('automatic_clustering', default=false) -%}
-  {%- set is_incremental = config.get('materialized') == 'incremental' -%}
   {%- if cluster_by_keys is not none and cluster_by_keys is string -%}
     {%-  set cluster_by_keys = [cluster_by_keys] -%}
     {%- set cluster_by_string = cluster_by_keys|join(", ")-%}
@@ -28,9 +27,6 @@
     {% if enable_automatic_clustering  -%}
       alter table {{relation}} resume recluster;
     {%- endif -%}
-
-
-
 
 {% endmacro %}
 
