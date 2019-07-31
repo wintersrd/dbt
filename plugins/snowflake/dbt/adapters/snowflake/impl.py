@@ -10,7 +10,9 @@ class SnowflakeAdapter(SQLAdapter):
     Relation = SnowflakeRelation
     ConnectionManager = SnowflakeConnectionManager
 
-    AdapterSpecificConfigs = frozenset({"transient", "cluster_by", "automatic_clustering"})
+    AdapterSpecificConfigs = frozenset(
+        {"transient", "cluster_by", "automatic_clustering"}
+    )
 
     @classmethod
     def date_function(cls):
@@ -20,8 +22,12 @@ class SnowflakeAdapter(SQLAdapter):
     def _catalog_filter_table(cls, table, manifest):
         # On snowflake, users can set QUOTED_IDENTIFIERS_IGNORE_CASE, so force
         # the column names to their lowercased forms.
-        lowered = table.rename(column_names=[c.lower() for c in table.column_names])
-        return super(SnowflakeAdapter, cls)._catalog_filter_table(lowered, manifest)
+        lowered = table.rename(
+            column_names=[c.lower() for c in table.column_names]
+        )
+        return super(SnowflakeAdapter, cls)._catalog_filter_table(
+            lowered, manifest
+        )
 
     def _make_match_kwargs(self, database, schema, identifier):
         quoting = self.config.quoting
