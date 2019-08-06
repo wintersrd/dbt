@@ -1,6 +1,7 @@
 import re
 from io import StringIO
 from contextlib import contextmanager
+import datetime
 
 import snowflake.connector
 import snowflake.connector.errors
@@ -12,6 +13,29 @@ from cryptography.hazmat.primitives import serialization
 from dbt.adapters.base import Credentials
 from dbt.adapters.sql import SQLConnectionManager
 from dbt.logger import GLOBAL_LOGGER as logger
+
+
+# Provide a sane Timezone that can be pickled
+# The datetime objects returned by snowflake-connector-python
+# are not currently pickleable, so they can't be shared across
+# process boundaries (ie. in the dbt rpc server)
+# See: https://github.com/snowflakedb/snowflake-connector-python/pull/188
+class OffsetTimezone(datetime.tzinfo):
+    def __init__(self, name, tzoffset_seconds):
+        self.name = name
+        self.tzoffset = datetime.timedelta(seconds=tzoffset_seconds)
+
+    def utcoffset(self, dt, is_dst=False):
+        return self.tzoffset
+
+    def tzname(self, dt):
+        return self.name
+
+    def dst(self, dt):
+        return datetime.timedelta(0)
+
+    def __repr__(self):
+        return self.name
 
 
 SNOWFLAKE_CREDENTIALS_CONTRACT = {
@@ -196,6 +220,29 @@ class SnowflakeConnectionManager(SQLConnectionManager):
             encoding=serialization.Encoding.DER,
             format=serialization.PrivateFormat.PKCS8,
             encryption_algorithm=serialization.NoEncryption())
+
+    @classmethod
+    def process_results(cls, column_names, rows):
+        # Override for Snowflake. The datetime objects returned by
+        # snowflake-connector-python are not pickleable, so we need
+        # to replace them with sane timezones
+        fixed = []
+        for row in rows:
+            fixed_row = []
+            for col in row:
+                if isinstance(col, datetime.datetime) and col.tzinfo:
+                    offset = col.utcoffset()
+                    offset_seconds = offset.total_seconds()
+                    new_timezone = OffsetTimezone(
+                        dbt.compat.to_native_string(col.tzinfo.tzname(col)),
+                        offset_seconds)
+                    col = col.astimezone(tz=new_timezone)
+                fixed_row.append(col)
+
+            fixed.append(fixed_row)
+
+        return super(SnowflakeConnectionManager, cls).process_results(
+            column_names, fixed)
 
     def add_query(self, sql, auto_begin=True,
                   bindings=None, abridge_sql_log=False):
