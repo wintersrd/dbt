@@ -16,12 +16,13 @@ from dbt.node_runners import ModelRunner
 import dbt.exceptions
 import dbt.flags
 from dbt.hooks import get_hook
-from dbt.ui.printer import \
-    print_hook_start_line, \
-    print_hook_end_line, \
-    print_timestamped_line, \
-    print_run_end_messages, \
-    get_counts
+from dbt.ui.printer import (
+    print_hook_start_line,
+    print_hook_end_line,
+    print_timestamped_line,
+    print_run_end_messages,
+    get_counts,
+)
 
 from dbt.compilation import compile_node
 from dbt.contracts.graph.parsed import ParsedHookNode
@@ -77,22 +78,19 @@ class RunTask(CompileTask):
         adapter.set_relations_cache(self.manifest)
 
     def get_hook_sql(self, adapter, hook, idx, num_hooks, extra_context):
-        compiled = compile_node(adapter, self.config, hook, self.manifest,
-                                extra_context)
+        compiled = compile_node(adapter, self.config, hook, self.manifest, extra_context)
         statement = compiled.wrapped_sql
         hook_index = hook.index or num_hooks
         hook_obj = get_hook(statement, index=hook_index)
-        return hook_obj.sql or ''
+        return hook_obj.sql or ""
 
     def _hook_keyfunc(self, hook: ParsedHookNode):
         package_name = hook.package_name
         if package_name == self.config.project_name:
-            package_name = BiggestName('')
+            package_name = BiggestName("")
         return package_name, hook.index
 
-    def get_hooks_by_type(
-        self, hook_type: RunHookType
-    ) -> List[ParsedHookNode]:
+    def get_hooks_by_type(self, hook_type: RunHookType) -> List[ParsedHookNode]:
         nodes = self.manifest.nodes.values()
         # find all hooks defined in the manifest (could be multiple projects)
         hooks = get_nodes_by_tags(nodes, {hook_type}, NodeType.Operation)
@@ -110,38 +108,31 @@ class RunTask(CompileTask):
             return
         num_hooks = len(ordered_hooks)
 
-        plural = 'hook' if num_hooks == 1 else 'hooks'
+        plural = "hook" if num_hooks == 1 else "hooks"
         with TextOnly():
             print_timestamped_line("")
-        print_timestamped_line(
-            'Running {} {} {}'.format(num_hooks, hook_type, plural)
-        )
-        startctx = TimestampNamed('node_started_at')
-        finishctx = TimestampNamed('node_finished_at')
+        print_timestamped_line("Running {} {} {}".format(num_hooks, hook_type, plural))
+        startctx = TimestampNamed("node_started_at")
+        finishctx = TimestampNamed("node_finished_at")
 
         for idx, hook in enumerate(ordered_hooks, start=1):
-            sql = self.get_hook_sql(adapter, hook, idx, num_hooks,
-                                    extra_context)
+            sql = self.get_hook_sql(adapter, hook, idx, num_hooks, extra_context)
 
-            hook_text = '{}.{}.{}'.format(hook.package_name, hook_type,
-                                          hook.index)
+            hook_text = "{}.{}.{}".format(hook.package_name, hook_type, hook.index)
             hook_meta_ctx = HookMetadata(hook, self.index_offset(idx))
             with UniqueID(hook.unique_id):
                 with hook_meta_ctx, startctx:
                     print_hook_start_line(hook_text, idx, num_hooks)
 
-                status = 'OK'
+                status = "OK"
 
                 with Timer() as timer:
                     if len(sql.strip()) > 0:
-                        status, _ = adapter.execute(sql, auto_begin=False,
-                                                    fetch=False)
+                        status, _ = adapter.execute(sql, auto_begin=False, fetch=False)
                 self.ran_hooks.append(hook)
 
-                with finishctx, DbtModelState({'node_status': 'passed'}):
-                    print_hook_end_line(
-                        hook_text, status, idx, num_hooks, timer.elapsed
-                    )
+                with finishctx, DbtModelState({"node_status": "passed"}):
+                    print_hook_end_line(hook_text, status, idx, num_hooks, timer.elapsed)
 
         self._total_executed += len(ordered_hooks)
 
@@ -162,17 +153,18 @@ class RunTask(CompileTask):
         execution = ""
 
         if execution_time is not None:
-            execution = " in {execution_time:0.2f}s".format(
-                execution_time=execution_time)
+            execution = " in {execution_time:0.2f}s".format(execution_time=execution_time)
 
         with TextOnly():
             print_timestamped_line("")
         print_timestamped_line(
-            "Finished running {stat_line}{execution}."
-            .format(stat_line=stat_line, execution=execution))
+            "Finished running {stat_line}{execution}.".format(
+                stat_line=stat_line, execution=execution
+            )
+        )
 
     def before_run(self, adapter, selected_uids):
-        with adapter.connection_named('master'):
+        with adapter.connection_named("master"):
             self.create_schemas(adapter, selected_uids)
             self.populate_adapter_cache(adapter)
             self.safe_run_hooks(adapter, RunHookType.Start, {})
@@ -181,15 +173,13 @@ class RunTask(CompileTask):
         # in on-run-end hooks, provide the value 'schemas', which is a list of
         # unique schemas that successfully executed models were in
         # errored failed skipped
-        schemas = list(set(
-            r.node.schema for r in results
-            if not any((r.error is not None, r.fail, r.skipped))
-        ))
+        schemas = list(
+            set(r.node.schema for r in results if not any((r.error is not None, r.fail, r.skipped)))
+        )
 
         self._total_executed += len(results)
-        with adapter.connection_named('master'):
-            self.safe_run_hooks(adapter, RunHookType.End,
-                                {'schemas': schemas, 'results': results})
+        with adapter.connection_named("master"):
+            self.safe_run_hooks(adapter, RunHookType.End, {"schemas": schemas, "results": results})
 
     def after_hooks(self, adapter, results, elapsed):
         self.print_results_line(results, elapsed)
@@ -199,7 +189,7 @@ class RunTask(CompileTask):
             "include": self.args.models,
             "exclude": self.args.exclude,
             "resource_types": [NodeType.Model],
-            "tags": []
+            "tags": [],
         }
 
     def get_runner_type(self):

@@ -32,21 +32,28 @@ class SnowflakeCredentials(Credentials):
 
     @property
     def type(self):
-        return 'snowflake'
+        return "snowflake"
 
     def _connection_keys(self):
-        return ('account', 'user', 'database', 'schema', 'warehouse', 'role',
-                'client_session_keep_alive')
+        return (
+            "account",
+            "user",
+            "database",
+            "schema",
+            "warehouse",
+            "role",
+            "client_session_keep_alive",
+        )
 
     def auth_args(self):
         # Pull all of the optional authentication args for the connector,
         # let connector handle the actual arg validation
         result = {}
         if self.password:
-            result['password'] = self.password
+            result["password"] = self.password
         if self.authenticator:
-            result['authenticator'] = self.authenticator
-        result['private_key'] = self._get_private_key()
+            result["authenticator"] = self.authenticator
+        result["private_key"] = self._get_private_key()
         return result
 
     def _get_private_key(self):
@@ -54,20 +61,20 @@ class SnowflakeCredentials(Credentials):
         if not self.private_key_path or self.private_key_passphrase is None:
             return None
 
-        with open(self.private_key_path, 'rb') as key:
+        with open(self.private_key_path, "rb") as key:
             p_key = serialization.load_pem_private_key(
-                key.read(),
-                password=self.private_key_passphrase.encode(),
-                backend=default_backend())
+                key.read(), password=self.private_key_passphrase.encode(), backend=default_backend()
+            )
 
         return p_key.private_bytes(
             encoding=serialization.Encoding.DER,
             format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption())
+            encryption_algorithm=serialization.NoEncryption(),
+        )
 
 
 class SnowflakeConnectionManager(SQLConnectionManager):
-    TYPE = 'snowflake'
+    TYPE = "snowflake"
 
     @contextmanager
     def exception_handler(self, sql):
@@ -76,18 +83,20 @@ class SnowflakeConnectionManager(SQLConnectionManager):
         except snowflake.connector.errors.ProgrammingError as e:
             msg = str(e)
 
-            logger.debug('Snowflake error: {}'.format(msg))
+            logger.debug("Snowflake error: {}".format(msg))
 
-            if 'Empty SQL statement' in msg:
+            if "Empty SQL statement" in msg:
                 logger.debug("got empty sql statement, moving on")
-            elif 'This session does not have a current database' in msg:
+            elif "This session does not have a current database" in msg:
                 self.release()
                 raise dbt.exceptions.FailedToConnectException(
-                    ('{}\n\nThis error sometimes occurs when invalid '
-                     'credentials are provided, or when your default role '
-                     'does not have access to use the specified database. '
-                     'Please double check your profile and try again.')
-                    .format(msg))
+                    (
+                        "{}\n\nThis error sometimes occurs when invalid "
+                        "credentials are provided, or when your default role "
+                        "does not have access to use the specified database. "
+                        "Please double check your profile and try again."
+                    ).format(msg)
+                )
             else:
                 self.release()
                 raise dbt.exceptions.DatabaseException(msg)
@@ -103,9 +112,9 @@ class SnowflakeConnectionManager(SQLConnectionManager):
             raise dbt.exceptions.RuntimeException(str(e)) from e
 
     @classmethod
-    def open(cls, connection):
-        if connection.state == 'open':
-            logger.debug('Connection is already open, skipping open.')
+    def open(cls, connection, autocommit=False):
+        if connection.state == "open":
+            logger.debug("Connection is already open, skipping open.")
             return connection
 
         try:
@@ -118,21 +127,21 @@ class SnowflakeConnectionManager(SQLConnectionManager):
                 schema=creds.schema,
                 warehouse=creds.warehouse,
                 role=creds.role,
-                autocommit=False,
+                autocommit=autocommit,
                 client_session_keep_alive=creds.client_session_keep_alive,
-                application='dbt',
+                application="dbt",
                 **creds.auth_args()
             )
 
             connection.handle = handle
-            connection.state = 'open'
+            connection.state = "open"
         except snowflake.connector.errors.Error as e:
-            logger.debug("Got an error when attempting to open a snowflake "
-                         "connection: '{}'"
-                         .format(e))
+            logger.debug(
+                "Got an error when attempting to open a snowflake " "connection: '{}'".format(e)
+            )
 
             connection.handle = None
-            connection.state = 'fail'
+            connection.state = "fail"
 
             raise dbt.exceptions.FailedToConnectException(str(e))
 
@@ -142,7 +151,7 @@ class SnowflakeConnectionManager(SQLConnectionManager):
 
         connection_name = connection.name
 
-        sql = 'select system$abort_session({})'.format(sid)
+        sql = "select system$abort_session({})".format(sid)
 
         logger.debug("Cancelling query '{}' ({})".format(connection_name, sid))
 
@@ -156,7 +165,7 @@ class SnowflakeConnectionManager(SQLConnectionManager):
         state = cursor.sqlstate
 
         if state is None:
-            state = 'SUCCESS'
+            state = "SUCCESS"
 
         return "{} {}".format(state, cursor.rowcount)
 
@@ -189,8 +198,7 @@ class SnowflakeConnectionManager(SQLConnectionManager):
 
         return super().process_results(column_names, fixed)
 
-    def add_query(self, sql, auto_begin=True,
-                  bindings=None, abridge_sql_log=False):
+    def add_query(self, sql, auto_begin=True, bindings=None, abridge_sql_log=False):
 
         connection = None
         cursor = None
@@ -207,22 +215,20 @@ class SnowflakeConnectionManager(SQLConnectionManager):
             # empty queries. this avoids using exceptions as flow control,
             # and also allows us to return the status of the last cursor
             without_comments = re.sub(
-                re.compile('^.*(--.*)$', re.MULTILINE),
-                '', individual_query).strip()
+                re.compile("^.*(--.*)$", re.MULTILINE), "", individual_query
+            ).strip()
 
             if without_comments == "":
                 continue
 
             connection, cursor = super().add_query(
-                individual_query, auto_begin,
-                bindings=bindings,
-                abridge_sql_log=abridge_sql_log
+                individual_query, auto_begin, bindings=bindings, abridge_sql_log=abridge_sql_log
             )
 
         if cursor is None:
             conn = self.get_thread_connection()
             if conn is None or conn.name is None:
-                conn_name = '<None>'
+                conn_name = "<None>"
             else:
                 conn_name = conn.name
 
@@ -230,8 +236,7 @@ class SnowflakeConnectionManager(SQLConnectionManager):
                 "Tried to run an empty query on model '{}'. If you are "
                 "conditionally running\nsql, eg. in a model hook, make "
                 "sure your `else` clause contains valid sql!\n\n"
-                "Provided SQL:\n{}"
-                .format(conn_name, sql)
+                "Provided SQL:\n{}".format(conn_name, sql)
             )
 
         return connection, cursor
@@ -241,10 +246,10 @@ class SnowflakeConnectionManager(SQLConnectionManager):
         """On snowflake, rolling back the handle of an aborted session raises
         an exception.
         """
-        logger.debug('initiating rollback')
+        logger.debug("initiating rollback")
         try:
             connection.handle.rollback()
         except snowflake.connector.errors.ProgrammingError as e:
             msg = str(e)
-            if 'Session no longer exists' not in msg:
+            if "Session no longer exists" not in msg:
                 raise

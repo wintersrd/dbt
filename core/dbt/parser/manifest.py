@@ -30,9 +30,9 @@ from dbt.parser.util import ParserUtils
 from dbt.version import __version__
 
 
-PARTIAL_PARSE_FILE_NAME = 'partial_parse.pickle'
-PARSING_STATE = DbtProcessState('parsing')
-DEFAULT_PARTIAL_PARSE = False
+PARTIAL_PARSE_FILE_NAME = "partial_parse.pickle"
+PARSING_STATE = DbtProcessState("parsing")
+DEFAULT_PARTIAL_PARSE = True
 
 
 _parser_types = [
@@ -53,33 +53,31 @@ _parser_types = [
 # impact graph selection or configs will result in weird test failures.
 # finally, we should hash the actual profile used, not just root project +
 # profiles.yml + relevant args. While sufficient, it is definitely overkill.
-def make_parse_result(
-    config: RuntimeConfig, all_projects: Mapping[str, Project]
-) -> ParseResult:
+def make_parse_result(config: RuntimeConfig, all_projects: Mapping[str, Project]) -> ParseResult:
     """Make a ParseResult from the project configuration and the profile."""
     # if any of these change, we need to reject the parser
     vars_hash = FileHash.from_contents(
-        '\0'.join([
-            getattr(config.args, 'vars', '{}') or '{}',
-            getattr(config.args, 'profile', '') or '',
-            getattr(config.args, 'target', '') or '',
-            __version__
-        ])
+        "\0".join(
+            [
+                getattr(config.args, "vars", "{}") or "{}",
+                getattr(config.args, "profile", "") or "",
+                getattr(config.args, "target", "") or "",
+                __version__,
+            ]
+        )
     )
-    profile_path = os.path.join(config.args.profiles_dir, 'profiles.yml')
+    profile_path = os.path.join(config.args.profiles_dir, "profiles.yml")
     with open(profile_path) as fp:
         profile_hash = FileHash.from_contents(fp.read())
 
     project_hashes = {}
     for name, project in all_projects.items():
-        path = os.path.join(project.project_root, 'dbt_project.yml')
+        path = os.path.join(project.project_root, "dbt_project.yml")
         with open(path) as fp:
             project_hashes[name] = FileHash.from_contents(fp.read())
 
     return ParseResult(
-        vars_hash=vars_hash,
-        profile_hash=profile_hash,
-        project_hashes=project_hashes,
+        vars_hash=vars_hash, profile_hash=profile_hash, project_hashes=project_hashes
     )
 
 
@@ -98,21 +96,15 @@ class ManifestLoader:
         else:
             self.macro_hook = macro_hook
 
-        self.results: ParseResult = make_parse_result(
-            root_project, all_projects,
-        )
+        self.results: ParseResult = make_parse_result(root_project, all_projects)
         self._loaded_file_cache: Dict[str, FileBlock] = {}
 
     def _load_macros(
-        self,
-        old_results: Optional[ParseResult],
-        internal_manifest: Optional[Manifest] = None,
+        self, old_results: Optional[ParseResult], internal_manifest: Optional[Manifest] = None
     ) -> None:
         projects = self.all_projects
         if internal_manifest is not None:
-            projects = {
-                k: v for k, v in self.all_projects.items() if k not in PACKAGES
-            }
+            projects = {k: v for k, v in self.all_projects.items() if k not in PACKAGES}
             self.results.macros.update(internal_manifest.macros)
             self.results.files.update(internal_manifest.files)
 
@@ -123,20 +115,13 @@ class ManifestLoader:
                 self.parse_with_cache(path, parser, old_results)
 
     def parse_with_cache(
-        self,
-        path: FilePath,
-        parser: BaseParser,
-        old_results: Optional[ParseResult],
+        self, path: FilePath, parser: BaseParser, old_results: Optional[ParseResult]
     ) -> None:
         block = self._get_file(path, parser)
         if not self._get_cached(block, old_results):
             parser.parse_file(block)
 
-    def _get_cached(
-        self,
-        block: FileBlock,
-        old_results: Optional[ParseResult],
-    ) -> bool:
+    def _get_cached(self, block: FileBlock, old_results: Optional[ParseResult]) -> bool:
         # TODO: handle multiple parsers w/ same files, by
         # tracking parser type vs node type? Or tracking actual
         # parser type during parsing?
@@ -155,15 +140,11 @@ class ManifestLoader:
         return block
 
     def parse_project(
-        self,
-        project: Project,
-        macro_manifest: Manifest,
-        old_results: Optional[ParseResult],
+        self, project: Project, macro_manifest: Manifest, old_results: Optional[ParseResult]
     ) -> None:
         parsers = []
         for cls in _parser_types:
-            parser = cls(self.results, project, self.root_project,
-                         macro_manifest)
+            parser = cls(self.results, project, self.root_project, macro_manifest)
             parsers.append(parser)
 
         # per-project cache.
@@ -177,22 +158,16 @@ class ManifestLoader:
         old_results = self.read_parse_results()
         self._load_macros(old_results, internal_manifest=None)
         # make a manifest with just the macros to get the context
-        macro_manifest = Manifest.from_macros(
-            macros=self.results.macros,
-            files=self.results.files
-        )
+        macro_manifest = Manifest.from_macros(macros=self.results.macros, files=self.results.files)
         return macro_manifest
 
     def load(self, internal_manifest: Optional[Manifest] = None):
         old_results = self.read_parse_results()
         if old_results is not None:
-            logger.debug('Got an acceptable cached parse result')
+            logger.debug("Got an acceptable cached parse result")
         self._load_macros(old_results, internal_manifest=internal_manifest)
         # make a manifest with just the macros to get the context
-        macro_manifest = Manifest.from_macros(
-            macros=self.results.macros,
-            files=self.results.files
-        )
+        macro_manifest = Manifest.from_macros(macros=self.results.macros, files=self.results.files)
         self.macro_hook(macro_manifest)
 
         for project in self.all_projects.values():
@@ -200,10 +175,9 @@ class ManifestLoader:
             self.parse_project(project, macro_manifest, old_results)
 
     def write_parse_results(self):
-        path = os.path.join(self.root_project.target_path,
-                            PARTIAL_PARSE_FILE_NAME)
+        path = os.path.join(self.root_project.target_path, PARTIAL_PARSE_FILE_NAME)
         make_directory(self.root_project.target_path)
-        with open(path, 'wb') as fp:
+        with open(path, "wb") as fp:
             pickle.dump(self.results, fp)
 
     def matching_parse_results(self, result: ParseResult) -> bool:
@@ -213,31 +187,28 @@ class ManifestLoader:
         try:
             if result.dbt_version != __version__:
                 logger.debug(
-                    'dbt version mismatch: {} != {}, cache invalidated'
-                    .format(result.dbt_version, __version__)
+                    "dbt version mismatch: {} != {}, cache invalidated".format(
+                        result.dbt_version, __version__
+                    )
                 )
                 return False
         except AttributeError:
-            logger.debug('malformed result file, cache invalidated')
+            logger.debug("malformed result file, cache invalidated")
             return False
 
         valid = True
 
         if self.results.vars_hash != result.vars_hash:
-            logger.debug('vars hash mismatch, cache invalidated')
+            logger.debug("vars hash mismatch, cache invalidated")
             valid = False
         if self.results.profile_hash != result.profile_hash:
-            logger.debug('profile hash mismatch, cache invalidated')
+            logger.debug("profile hash mismatch, cache invalidated")
             valid = False
 
-        missing_keys = {
-            k for k in self.results.project_hashes
-            if k not in result.project_hashes
-        }
+        missing_keys = {k for k in self.results.project_hashes if k not in result.project_hashes}
         if missing_keys:
             logger.debug(
-                'project hash mismatch: values missing, cache invalidated: {}'
-                .format(missing_keys)
+                "project hash mismatch: values missing, cache invalidated: {}".format(missing_keys)
             )
             valid = False
 
@@ -246,9 +217,8 @@ class ManifestLoader:
                 old_value = result.project_hashes[key]
                 if new_value != old_value:
                     logger.debug(
-                        'For key {}, hash mismatch ({} -> {}), cache '
-                        'invalidated'
-                        .format(key, old_value, new_value)
+                        "For key {}, hash mismatch ({} -> {}), cache "
+                        "invalidated".format(key, old_value, new_value)
                     )
                     valid = False
         return valid
@@ -265,14 +235,13 @@ class ManifestLoader:
 
     def read_parse_results(self) -> Optional[ParseResult]:
         if not self._partial_parse_enabled():
-            logger.debug('Partial parsing not enabled')
+            logger.debug("Partial parsing not enabled")
             return None
-        path = os.path.join(self.root_project.target_path,
-                            PARTIAL_PARSE_FILE_NAME)
+        path = os.path.join(self.root_project.target_path, PARTIAL_PARSE_FILE_NAME)
 
         if os.path.exists(path):
             try:
-                with open(path, 'rb') as fp:
+                with open(path, "rb") as fp:
                     result: ParseResult = pickle.load(fp)
                 # keep this check inside the try/except in case something about
                 # the file has changed in weird ways, perhaps due to being a
@@ -281,9 +250,8 @@ class ManifestLoader:
                     return result
             except Exception as exc:
                 logger.debug(
-                    'Failed to load parsed file from disk at {}: {}'
-                    .format(path, exc),
-                    exc_info=True
+                    "Failed to load parsed file from disk at {}: {}".format(path, exc),
+                    exc_info=True,
                 )
 
         return None
@@ -305,15 +273,9 @@ class ManifestLoader:
             files=self.results.files,
         )
         manifest.patch_nodes(self.results.patches)
-        manifest = ParserUtils.process_sources(
-            manifest, self.root_project.project_name
-        )
-        manifest = ParserUtils.process_refs(
-            manifest, self.root_project.project_name
-        )
-        manifest = ParserUtils.process_docs(
-            manifest, self.root_project.project_name
-        )
+        manifest = ParserUtils.process_sources(manifest, self.root_project.project_name)
+        manifest = ParserUtils.process_refs(manifest, self.root_project.project_name)
+        manifest = ParserUtils.process_docs(manifest, self.root_project.project_name)
         return manifest
 
     @classmethod
@@ -354,15 +316,11 @@ def _check_resource_uniqueness(manifest):
 
         existing_node = names_resources.get(name)
         if existing_node is not None:
-            dbt.exceptions.raise_duplicate_resource_name(
-                existing_node, node
-            )
+            dbt.exceptions.raise_duplicate_resource_name(existing_node, node)
 
         existing_alias = alias_resources.get(alias)
         if existing_alias is not None:
-            dbt.exceptions.raise_ambiguous_alias(
-                existing_alias, node
-            )
+            dbt.exceptions.raise_ambiguous_alias(existing_alias, node)
 
         names_resources[name] = node
         alias_resources[alias] = node
@@ -388,10 +346,7 @@ def _load_projects(config, paths):
         try:
             project = config.new_project(path)
         except dbt.exceptions.DbtProjectError as e:
-            raise dbt.exceptions.DbtProjectError(
-                'Failed to read package at {}: {}'
-                .format(path, e)
-            )
+            raise dbt.exceptions.DbtProjectError("Failed to read package at {}: {}".format(path, e))
         else:
             yield project.project_name, project
 
@@ -406,7 +361,7 @@ def _project_directories(config):
     for name in dependencies:
         full_obj = os.path.join(root, name)
 
-        if not os.path.isdir(full_obj) or name.startswith('__'):
+        if not os.path.isdir(full_obj) or name.startswith("__"):
             # exclude non-dirs and dirs that start with __
             # the latter could be something like __pycache__
             # for the global dbt modules dir
@@ -417,10 +372,7 @@ def _project_directories(config):
 
 def load_all_projects(config) -> Mapping[str, Project]:
     all_projects = {config.project_name: config}
-    project_paths = itertools.chain(
-        internal_project_names(),
-        _project_directories(config)
-    )
+    project_paths = itertools.chain(internal_project_names(), _project_directories(config))
     all_projects.update(_load_projects(config, project_paths))
     return all_projects
 

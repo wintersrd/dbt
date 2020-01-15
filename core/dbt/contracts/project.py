@@ -5,28 +5,26 @@ from dbt.ui import printer
 from dbt.helper_types import NoValue
 
 from hologram import JsonSchemaMixin, ValidationError
-from hologram.helpers import HyphenatedJsonSchemaMixin, register_pattern, \
-    ExtensibleJsonSchemaMixin
+from hologram.helpers import HyphenatedJsonSchemaMixin, register_pattern, ExtensibleJsonSchemaMixin
 
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Union, Any, NewType
 
-PIN_PACKAGE_URL = 'https://docs.getdbt.com/docs/package-management#section-specifying-package-versions' # noqa
-DEFAULT_SEND_ANONYMOUS_USAGE_STATS = True
+PIN_PACKAGE_URL = (
+    "https://docs.getdbt.com/docs/package-management#section-specifying-package-versions"
+)  # noqa
+DEFAULT_SEND_ANONYMOUS_USAGE_STATS = False
 DEFAULT_USE_COLORS = True
 
 
-Name = NewType('Name', str)
-register_pattern(Name, r'^[^\d\W]\w*$')
+Name = NewType("Name", str)
+register_pattern(Name, r"^[^\d\W]\w*$")
 
 # this does not support the full semver (does not allow a trailing -fooXYZ) and
 # is not restrictive enough for full semver, (allows '1.0'). But it's like
 # 'semver lite'.
-SemverString = NewType('SemverString', str)
-register_pattern(
-    SemverString,
-    r'^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(\.(?:0|[1-9]\d*))?$',
-)
+SemverString = NewType("SemverString", str)
+register_pattern(SemverString, r"^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(\.(?:0|[1-9]\d*))?$")
 
 
 @dataclass
@@ -75,8 +73,7 @@ class ProjectPackageMetadata:
 
     @classmethod
     def from_project(cls, project):
-        return cls(name=project.project_name,
-                   packages=project.packages.packages)
+        return cls(name=project.project_name, packages=project.packages.packages)
 
 
 @dataclass
@@ -85,52 +82,49 @@ class Downloads(ExtensibleJsonSchemaMixin, Replaceable):
 
 
 @dataclass
-class RegistryPackageMetadata(
-    ExtensibleJsonSchemaMixin,
-    ProjectPackageMetadata,
-):
+class RegistryPackageMetadata(ExtensibleJsonSchemaMixin, ProjectPackageMetadata):
     downloads: Downloads
 
 
 # A list of all the reserved words that packages may not have as names.
 BANNED_PROJECT_NAMES = {
-    '_sql_results',
-    'adapter',
-    'api',
-    'column',
-    'config',
-    'context',
-    'database',
-    'env',
-    'env_var',
-    'exceptions',
-    'execute',
-    'flags',
-    'fromjson',
-    'graph',
-    'invocation_id',
-    'load_agate_table',
-    'load_result',
-    'log',
-    'model',
-    'modules',
-    'post_hooks',
-    'pre_hooks',
-    'ref',
-    'render',
-    'return',
-    'run_started_at',
-    'schema',
-    'source',
-    'sql',
-    'sql_now',
-    'store_result',
-    'target',
-    'this',
-    'tojson',
-    'try_or_compiler_error',
-    'var',
-    'write',
+    "_sql_results",
+    "adapter",
+    "api",
+    "column",
+    "config",
+    "context",
+    "database",
+    "env",
+    "env_var",
+    "exceptions",
+    "execute",
+    "flags",
+    "fromjson",
+    "graph",
+    "invocation_id",
+    "load_agate_table",
+    "load_result",
+    "log",
+    "model",
+    "modules",
+    "post_hooks",
+    "pre_hooks",
+    "ref",
+    "render",
+    "return",
+    "run_started_at",
+    "schema",
+    "source",
+    "sql",
+    "sql_now",
+    "store_result",
+    "target",
+    "this",
+    "tojson",
+    "try_or_compiler_error",
+    "var",
+    "write",
 }
 
 
@@ -165,10 +159,7 @@ class Project(HyphenatedJsonSchemaMixin, Replaceable):
     def from_dict(cls, data, validate=True):
         result = super().from_dict(data, validate=validate)
         if result.name in BANNED_PROJECT_NAMES:
-            raise ValidationError(
-                'Invalid project name: {} is a reserved word'
-                .format(result.name)
-            )
+            raise ValidationError("Invalid project name: {} is a reserved word".format(result.name))
         return result
 
 
@@ -194,8 +185,8 @@ class UserConfig(ExtensibleJsonSchemaMixin, Replaceable):
 
 @dataclass
 class ProfileConfig(HyphenatedJsonSchemaMixin, Replaceable):
-    profile_name: str = field(metadata={'preserve_underscore': True})
-    target_name: str = field(metadata={'preserve_underscore': True})
+    profile_name: str = field(metadata={"preserve_underscore": True})
+    target_name: str = field(metadata={"preserve_underscore": True})
     config: UserConfig
     threads: int
     # TODO: make this a dynamic union of some kind?
@@ -212,10 +203,7 @@ class ConfiguredQuoting(Quoting, Replaceable):
 
 @dataclass
 class Configuration(Project, ProfileConfig):
-    cli_vars: Dict[str, Any] = field(
-        default_factory=dict,
-        metadata={'preserve_underscore': True},
-    )
+    cli_vars: Dict[str, Any] = field(default_factory=dict, metadata={"preserve_underscore": True})
     quoting: Optional[ConfiguredQuoting] = None
 
 

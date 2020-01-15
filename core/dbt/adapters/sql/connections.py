@@ -20,11 +20,12 @@ class SQLConnectionManager(BaseConnectionManager):
         - get_status
         - open
     """
+
     @abc.abstractmethod
     def cancel(self, connection: Connection):
         """Cancel the given connection."""
         raise dbt.exceptions.NotImplementedException(
-            '`cancel` is not implemented for this adapter!'
+            "`cancel` is not implemented for this adapter!"
         )
 
     def cancel_open(self) -> List[str]:
@@ -48,25 +49,22 @@ class SQLConnectionManager(BaseConnectionManager):
         sql: str,
         auto_begin: bool = True,
         bindings: Optional[Any] = None,
-        abridge_sql_log: bool = False
+        abridge_sql_log: bool = False,
     ) -> Tuple[Connection, Any]:
         connection = self.get_thread_connection()
         if auto_begin and connection.transaction_open is False:
             self.begin()
 
-        logger.debug('Using {} connection "{}".'
-                     .format(self.TYPE, connection.name))
+        logger.debug('Using {} connection "{}".'.format(self.TYPE, connection.name))
 
         with self.exception_handler(sql):
             if abridge_sql_log:
-                log_sql = '{}...'.format(sql[:512])
+                log_sql = "{}...".format(sql[:512])
             else:
                 log_sql = sql
 
             logger.debug(
-                'On {connection_name}: {sql}',
-                connection_name=connection.name,
-                sql=log_sql,
+                "On {connection_name}: {sql}", connection_name=connection.name, sql=log_sql
             )
             pre = time.time()
 
@@ -76,7 +74,7 @@ class SQLConnectionManager(BaseConnectionManager):
             logger.debug(
                 "SQL status: {status} in {elapsed:0.2f} seconds",
                 status=self.get_status(cursor),
-                elapsed=(time.time() - pre)
+                elapsed=(time.time() - pre),
             )
 
             return connection, cursor
@@ -85,14 +83,12 @@ class SQLConnectionManager(BaseConnectionManager):
     def get_status(cls, cursor: Any) -> str:
         """Get the status of the cursor."""
         raise dbt.exceptions.NotImplementedException(
-            '`get_status` is not implemented for this adapter!'
+            "`get_status` is not implemented for this adapter!"
         )
 
     @classmethod
     def process_results(
-        cls,
-        column_names: Iterable[str],
-        rows: Iterable[Any]
+        cls, column_names: Iterable[str], rows: Iterable[Any]
     ) -> List[Dict[str, Any]]:
 
         return [dict(zip(column_names, row)) for row in rows]
@@ -110,9 +106,10 @@ class SQLConnectionManager(BaseConnectionManager):
         return dbt.clients.agate_helper.table_from_data(data, column_names)
 
     def execute(
-        self, sql: str, auto_begin: bool = False, fetch: bool = False
+        self, sql: str, auto_begin: bool = False, fetch: bool = False, autocommit: bool = False
     ) -> Tuple[str, agate.Table]:
         sql = self._add_query_comment(sql)
+        logger.debug(sql)
         _, cursor = self.add_query(sql, auto_begin)
         status = self.get_status(cursor)
         if fetch:
@@ -122,10 +119,10 @@ class SQLConnectionManager(BaseConnectionManager):
         return status, table
 
     def add_begin_query(self):
-        return self.add_query('BEGIN', auto_begin=False)
+        return self.add_query("BEGIN", auto_begin=False)
 
     def add_commit_query(self):
-        return self.add_query('COMMIT', auto_begin=False)
+        return self.add_query("COMMIT", auto_begin=False)
 
     def begin(self):
         connection = self.get_thread_connection()
@@ -133,13 +130,14 @@ class SQLConnectionManager(BaseConnectionManager):
         if dbt.flags.STRICT_MODE:
             if not isinstance(connection, Connection):
                 raise dbt.exceptions.CompilerException(
-                    f'In begin, got {connection} - not a Connection!'
+                    f"In begin, got {connection} - not a Connection!"
                 )
 
         if connection.transaction_open is True:
             raise dbt.exceptions.InternalException(
                 'Tried to begin a new transaction on connection "{}", but '
-                'it already had one open!'.format(connection.name))
+                "it already had one open!".format(connection.name)
+            )
 
         self.add_begin_query()
 
@@ -151,15 +149,16 @@ class SQLConnectionManager(BaseConnectionManager):
         if dbt.flags.STRICT_MODE:
             if not isinstance(connection, Connection):
                 raise dbt.exceptions.CompilerException(
-                    f'In commit, got {connection} - not a Connection!'
+                    f"In commit, got {connection} - not a Connection!"
                 )
 
         if connection.transaction_open is False:
             raise dbt.exceptions.InternalException(
                 'Tried to commit transaction on connection "{}", but '
-                'it does not have one open!'.format(connection.name))
+                "it does not have one open!".format(connection.name)
+            )
 
-        logger.debug('On {}: COMMIT'.format(connection.name))
+        logger.debug("On {}: COMMIT".format(connection.name))
         self.add_commit_query()
 
         connection.transaction_open = False

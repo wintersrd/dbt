@@ -26,9 +26,9 @@ import dbt.utils
 
 import dbt.graph.selector
 
-RESULT_FILE_NAME = 'run_results.json'
-MANIFEST_FILE_NAME = 'manifest.json'
-RUNNING_STATE = DbtProcessState('running')
+RESULT_FILE_NAME = "run_results.json"
+MANIFEST_FILE_NAME = "manifest.json"
+RUNNING_STATE = DbtProcessState("running")
 
 
 def write_manifest(config, manifest):
@@ -71,36 +71,28 @@ class GraphRunnableTask(ManifestTask):
         return value
 
     def select_nodes(self):
-        selector = dbt.graph.selector.NodeSelector(
-            self.linker.graph, self.manifest
-        )
+        selector = dbt.graph.selector.NodeSelector(self.linker.graph, self.manifest)
         selected_nodes = selector.select(self.build_query())
         return selected_nodes
 
     def _runtime_initialize(self):
         super()._runtime_initialize()
         selected_nodes = self.select_nodes()
-        self.job_queue = self.linker.as_graph_queue(self.manifest,
-                                                    selected_nodes)
+        self.job_queue = self.linker.as_graph_queue(self.manifest, selected_nodes)
 
         # we use this a couple times. order does not matter.
-        self._flattened_nodes = [
-            self.manifest.nodes[uid] for uid in selected_nodes
-        ]
+        self._flattened_nodes = [self.manifest.nodes[uid] for uid in selected_nodes]
 
-        self.num_nodes = len([
-            n for n in self._flattened_nodes
-            if not n.is_ephemeral_model
-        ])
+        self.num_nodes = len([n for n in self._flattened_nodes if not n.is_ephemeral_model])
 
     def raise_on_first_error(self):
         return False
 
     def build_query(self):
-        raise dbt.exceptions.NotImplementedException('Not Implemented')
+        raise dbt.exceptions.NotImplementedException("Not Implemented")
 
     def get_runner_type(self):
-        raise dbt.exceptions.NotImplementedException('Not Implemented')
+        raise dbt.exceptions.NotImplementedException("Not Implemented")
 
     def result_path(self):
         return os.path.join(self.config.target_path, RESULT_FILE_NAME)
@@ -122,21 +114,19 @@ class GraphRunnableTask(ManifestTask):
     def call_runner(self, runner):
         uid_context = UniqueID(runner.node.unique_id)
         with RUNNING_STATE, uid_context:
-            startctx = TimestampNamed('node_started_at')
+            startctx = TimestampNamed("node_started_at")
             index = self.index_offset(runner.node_index)
             extended_metadata = ModelMetadata(runner.node, index)
             with startctx, extended_metadata:
-                logger.debug('Began running node {}'.format(
-                    runner.node.unique_id))
-            status = 'error'  # we must have an error if we don't see this
+                logger.debug("Began running node {}".format(runner.node.unique_id))
+            status = "error"  # we must have an error if we don't see this
             try:
                 result = runner.run_with_hooks(self.manifest)
                 status = runner.get_result_status(result)
             finally:
-                finishctx = TimestampNamed('node_finished_at')
+                finishctx = TimestampNamed("node_finished_at")
                 with finishctx, DbtModelState(status):
-                    logger.debug('Finished running node {}'.format(
-                        runner.node.unique_id))
+                    logger.debug("Finished running node {}".format(runner.node.unique_id))
         if result.error is not None and self.raise_on_first_error():
             # if we raise inside a thread, it'll just get silently swallowed.
             # stash the error message we want here, and it will check the
@@ -166,6 +156,7 @@ class GraphRunnableTask(ManifestTask):
     def run_queue(self, pool):
         """Given a pool, submit jobs from the queue to the pool.
         """
+
         def callback(result):
             """Note: mark_done, at a minimum, must happen here or dbt will
             deadlock during ephemeral result error handling!
@@ -233,9 +224,11 @@ class GraphRunnableTask(ManifestTask):
             adapter = get_adapter(self.config)
 
             if not adapter.is_cancelable():
-                msg = ("The {} adapter does not support query "
-                       "cancellation. Some queries may still be "
-                       "running!".format(adapter.type()))
+                msg = (
+                    "The {} adapter does not support query "
+                    "cancellation. Some queries may still be "
+                    "running!".format(adapter.type())
+                )
 
                 yellow = dbt.ui.printer.COLOR_FG_YELLOW
                 dbt.ui.printer.print_timestamped_line(msg, yellow)
@@ -246,8 +239,7 @@ class GraphRunnableTask(ManifestTask):
 
             pool.join()
 
-            dbt.ui.printer.print_run_end_messages(self.node_results,
-                                                  early_exit=True)
+            dbt.ui.printer.print_run_end_messages(self.node_results, early_exit=True)
 
             raise
 
@@ -286,11 +278,7 @@ class GraphRunnableTask(ManifestTask):
         finally:
             adapter.cleanup_connections()
 
-        result = self.get_result(
-            results=res,
-            elapsed_time=elapsed,
-            generated_at=datetime.utcnow()
-        )
+        result = self.get_result(results=res, elapsed_time=elapsed, generated_at=datetime.utcnow())
         return result
 
     def run(self):
@@ -300,13 +288,11 @@ class GraphRunnableTask(ManifestTask):
         self._runtime_initialize()
 
         if len(self._flattened_nodes) == 0:
-            logger.warning("WARNING: Nothing to do. Try checking your model "
-                           "configs and model specification args")
-            return self.get_result(
-                results=[],
-                generated_at=datetime.utcnow(),
-                elapsed_time=0.0,
+            logger.warning(
+                "WARNING: Nothing to do. Try checking your model "
+                "configs and model specification args"
             )
+            return self.get_result(results=[], generated_at=datetime.utcnow(), elapsed_time=0.0)
         else:
             with TextOnly():
                 logger.info("")
@@ -342,19 +328,17 @@ class GraphRunnableTask(ManifestTask):
         required_databases = set(db for db, _ in required_schemas)
 
         existing_schemas_lowered = set()
-        for db in required_databases:
-            existing_schemas_lowered.update(
-                (db.lower(), s.lower()) for s in adapter.list_schemas(db))
+        # for db in required_databases:
+        #    existing_schemas_lowered.update(
+        #        (db.lower(), s.lower()) for s in adapter.list_schemas(db))
 
         for db, schema in required_schemas:
-            if (db.lower(), schema.lower()) not in existing_schemas_lowered:
-                adapter.create_schema(db, schema)
+            #    if (db.lower(), schema.lower()) not in existing_schemas_lowered:
+            adapter.create_schema(db, schema)
 
     def get_result(self, results, elapsed_time, generated_at):
         return ExecutionResult(
-            results=results,
-            elapsed_time=elapsed_time,
-            generated_at=generated_at
+            results=results, elapsed_time=elapsed_time, generated_at=generated_at
         )
 
     def task_end_messages(self, results):

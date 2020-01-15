@@ -1,6 +1,7 @@
 {% macro snowflake__create_table_as(temporary, relation, sql) -%}
   {%- set transient = config.get('transient', default=true) -%}
   {%- set cluster_by_keys = config.get('cluster_by', default=none) -%}
+  {%- set unique_key = config.get('unique_key', default=none) -%}
   {%- set enable_automatic_clustering = config.get('automatic_clustering', default=false) -%}
   {%- set copy_grants = config.get('copy_grants', default=false) -%}
   {%- if cluster_by_keys is not none and cluster_by_keys is string -%}
@@ -80,7 +81,7 @@
 {% endmacro %}
 
 
-{% macro snowflake__list_relations_without_caching(search_string) %}
+{% macro snowflake__list_relations_without_caching(information_schema, search_string) %}
   {% call statement('list_relations_without_caching', fetch_result=True) -%}
     select
       table_catalog as database,
@@ -92,10 +93,9 @@
            when table_type = 'EXTERNAL TABLE' then 'external'
            else table_type
       end as table_type
-    from {{ information_schema }}.tables
-    where (upper(table_catalog), upper(table_schema)) in ( {{ search_string }} )
-    --where table_schema ilike '{{ schema }}'
-    --  and table_catalog ilike '{{ information_schema.database.lower() }}'
+    from {{ information_schema }}.information_schema.tables
+    where upper(table_schema) in ( {{ search_string }} )
+    and upper(table_catalog) = '{{ information_schema }}'
   {% endcall %}
   {{ return(load_result('list_relations_without_caching').table) }}
 {% endmacro %}

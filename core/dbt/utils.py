@@ -8,9 +8,7 @@ import itertools
 import json
 import os
 from enum import Enum
-from typing import (
-    Tuple, Type, Any, Optional, TypeVar, Dict, Iterable, Set, List
-)
+from typing import Tuple, Type, Any, Optional, TypeVar, Dict, Iterable, Set, List
 from typing_extensions import Protocol
 
 import dbt.exceptions
@@ -35,7 +33,7 @@ class ExitCodes(int, Enum):
 
 
 def to_bytes(s):
-    return s.encode('latin-1')
+    return s.encode("latin-1")
 
 
 def coalesce(*args):
@@ -48,37 +46,36 @@ def coalesce(*args):
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n):
-        yield l[i:i + n]
+        yield l[i : i + n]
 
 
 def get_profile_from_project(project):
-    target_name = project.get('target', {})
-    profile = project.get('outputs', {}).get(target_name, {})
+    target_name = project.get("target", {})
+    profile = project.get("outputs", {}).get(target_name, {})
     return profile
 
 
 def get_model_name_or_none(model):
     if model is None:
-        name = '<None>'
+        name = "<None>"
 
     elif isinstance(model, str):
         name = model
     elif isinstance(model, dict):
-        name = model.get('alias', model.get('name'))
-    elif hasattr(model, 'alias'):
+        name = model.get("alias", model.get("name"))
+    elif hasattr(model, "alias"):
         name = model.alias
-    elif hasattr(model, 'name'):
+    elif hasattr(model, "name"):
         name = model.name
     else:
         name = str(model)
     return name
 
 
-def compiler_warning(model, msg, resource_type='model'):
+def compiler_warning(model, msg, resource_type="model"):
     name = get_model_name_or_none(model)
     logger.info(
-        "* Compilation warning while compiling {} {}:\n* {}\n"
-        .format(resource_type, name, msg)
+        "* Compilation warning while compiling {} {}:\n* {}\n".format(resource_type, name, msg)
     )
 
 
@@ -90,7 +87,7 @@ def id_matches(unique_id, target_name, target_package, nodetypes, model):
     operator.
     """
     node_type = model.resource_type
-    node_parts = unique_id.split('.', 2)
+    node_parts = unique_id.split(".", 2)
     if len(node_parts) != 3:
         msg = "unique_id {} is malformed".format(unique_id)
         dbt.exceptions.raise_compiler_error(msg, model)
@@ -100,12 +97,11 @@ def id_matches(unique_id, target_name, target_package, nodetypes, model):
         return False
 
     if node_type == NodeType.Source.value:
-        if node_name.count('.') != 1:
-            msg = "{} names must contain exactly 1 '.' character"\
-                .format(node_type)
+        if node_name.count(".") != 1:
+            msg = "{} names must contain exactly 1 '.' character".format(node_type)
             dbt.exceptions.raise_compiler_error(msg, model)
     else:
-        if '.' in node_name:
+        if "." in node_name:
             msg = "{} names cannot contain '.' characters".format(node_type)
             dbt.exceptions.raise_compiler_error(msg, model)
 
@@ -141,28 +137,27 @@ def find_in_list_by_name(haystack, target_name, target_package, nodetype):
     return None
 
 
-MACRO_PREFIX = 'dbt_macro__'
-DOCS_PREFIX = 'dbt_docs__'
+MACRO_PREFIX = "dbt_macro__"
+DOCS_PREFIX = "dbt_docs__"
 
 
 def get_dbt_macro_name(name):
     if name is None:
-        raise dbt.exceptions.InternalException('Got None for a macro name!')
-    return '{}{}'.format(MACRO_PREFIX, name)
+        raise dbt.exceptions.InternalException("Got None for a macro name!")
+    return "{}{}".format(MACRO_PREFIX, name)
 
 
 def get_dbt_docs_name(name):
     if name is None:
-        raise dbt.exceptions.InternalException('Got None for a doc name!')
-    return '{}{}'.format(DOCS_PREFIX, name)
+        raise dbt.exceptions.InternalException("Got None for a doc name!")
+    return "{}{}".format(DOCS_PREFIX, name)
 
 
-def get_materialization_macro_name(materialization_name, adapter_type=None,
-                                   with_prefix=True):
+def get_materialization_macro_name(materialization_name, adapter_type=None, with_prefix=True):
     if adapter_type is None:
-        adapter_type = 'default'
+        adapter_type = "default"
 
-    name = 'materialization_{}_{}'.format(materialization_name, adapter_type)
+    name = "materialization_{}_{}".format(materialization_name, adapter_type)
 
     if with_prefix:
         return get_dbt_macro_name(name)
@@ -242,22 +237,15 @@ def _deep_map(func, value, keypath):
     atomic_types = (int, float, str, type(None), bool)
 
     if isinstance(value, list):
-        ret = [
-            _deep_map(func, v, (keypath + (idx,)))
-            for idx, v in enumerate(value)
-        ]
+        ret = [_deep_map(func, v, (keypath + (idx,))) for idx, v in enumerate(value)]
     elif isinstance(value, dict):
-        ret = {
-            k: _deep_map(func, v, (keypath + (k,)))
-            for k, v in value.items()
-        }
+        ret = {k: _deep_map(func, v, (keypath + (k,))) for k, v in value.items()}
     elif isinstance(value, atomic_types):
         ret = func(value, keypath)
     else:
         ok_types = (list, dict) + atomic_types
         raise dbt.exceptions.DbtConfigError(
-            'in _deep_map, expected one of {!r}, got {!r}'
-            .format(ok_types, type(value))
+            "in _deep_map, expected one of {!r}, got {!r}".format(ok_types, type(value))
         )
 
     return ret
@@ -282,10 +270,8 @@ def deep_map(func, value):
     try:
         return _deep_map(func, value, ())
     except RuntimeError as exc:
-        if 'maximum recursion depth exceeded' in str(exc):
-            raise dbt.exceptions.RecursionException(
-                'Cycle detected in deep_map'
-            )
+        if "maximum recursion depth exceeded" in str(exc):
+            raise dbt.exceptions.RecursionException("Cycle detected in deep_map")
         raise
 
 
@@ -313,7 +299,7 @@ def get_pseudo_test_path(node_name, source_path, test_type):
 
 
 def get_pseudo_hook_path(hook_name):
-    path_parts = ['hooks', "{}.sql".format(hook_name)]
+    path_parts = ["hooks", "{}.sql".format(hook_name)]
     return os.path.join(*path_parts)
 
 
@@ -321,7 +307,7 @@ class _Tagged(Protocol):
     tags: Iterable[str]
 
 
-Tagged = TypeVar('Tagged', bound=_Tagged)
+Tagged = TypeVar("Tagged", bound=_Tagged)
 
 
 def get_nodes_by_tags(
@@ -336,15 +322,15 @@ def get_nodes_by_tags(
 
 
 def md5(string):
-    return hashlib.md5(string.encode('utf-8')).hexdigest()
+    return hashlib.md5(string.encode("utf-8")).hexdigest()
 
 
 def get_hash(model):
-    return hashlib.md5(model.unique_id.encode('utf-8')).hexdigest()
+    return hashlib.md5(model.unique_id.encode("utf-8")).hexdigest()
 
 
 def get_hashed_contents(model):
-    return hashlib.md5(model.raw_sql.encode('utf-8')).hexdigest()
+    return hashlib.md5(model.raw_sql.encode("utf-8")).hexdigest()
 
 
 def flatten_nodes(dep_list):
@@ -352,11 +338,12 @@ def flatten_nodes(dep_list):
 
 
 class memoized:
-    '''Decorator. Caches a function's return value each time it is called. If
+    """Decorator. Caches a function's return value each time it is called. If
     called later with the same arguments, the cached value is returned (not
     reevaluated).
 
-    Taken from https://wiki.python.org/moin/PythonDecoratorLibrary#Memoize'''
+    Taken from https://wiki.python.org/moin/PythonDecoratorLibrary#Memoize"""
+
     def __init__(self, func):
         self.func = func
         self.cache = {}
@@ -373,52 +360,40 @@ class memoized:
         return value
 
     def __repr__(self):
-        '''Return the function's docstring.'''
+        """Return the function's docstring."""
         return self.func.__doc__
 
     def __get__(self, obj, objtype):
-        '''Support instance methods.'''
+        """Support instance methods."""
         return functools.partial(self.__call__, obj)
 
 
-def invalid_ref_test_message(node, target_model_name, target_model_package,
-                             disabled):
+def invalid_ref_test_message(node, target_model_name, target_model_package, disabled):
     if disabled:
-        msg = dbt.exceptions.get_target_disabled_msg(
-            node, target_model_name, target_model_package
-        )
+        msg = dbt.exceptions.get_target_disabled_msg(node, target_model_name, target_model_package)
     else:
-        msg = dbt.exceptions.get_target_not_found_msg(
-            node, target_model_name, target_model_package
-        )
-    return 'WARNING: {}'.format(msg)
+        msg = dbt.exceptions.get_target_not_found_msg(node, target_model_name, target_model_package)
+    return "WARNING: {}".format(msg)
 
 
-def invalid_ref_fail_unless_test(node, target_model_name,
-                                 target_model_package, disabled):
+def invalid_ref_fail_unless_test(node, target_model_name, target_model_package, disabled):
     if node.resource_type == NodeType.Test:
-        msg = invalid_ref_test_message(node, target_model_name,
-                                       target_model_package, disabled)
+        msg = invalid_ref_test_message(node, target_model_name, target_model_package, disabled)
         if disabled:
             logger.debug(msg)
         else:
             dbt.exceptions.warn_or_error(msg)
 
     else:
-        dbt.exceptions.ref_target_not_found(
-            node,
-            target_model_name,
-            target_model_package)
+        dbt.exceptions.ref_target_not_found(node, target_model_name, target_model_package)
 
 
 def invalid_source_fail_unless_test(node, target_name, target_table_name):
     if node.resource_type == NodeType.Test:
-        msg = dbt.exceptions.source_disabled_message(node, target_name,
-                                                     target_table_name)
-        dbt.exceptions.warn_or_error(msg, log_fmt='WARNING: {}')
+        msg = dbt.exceptions.source_disabled_message(node, target_name, target_table_name)
+        dbt.exceptions.warn_or_error(msg, log_fmt="WARNING: {}")
     else:
-        dbt.exceptions.source_target_not_found(node, target_name,
-                                               target_table_name)
+        dbt.exceptions.source_target_not_found(node, target_name, target_table_name)
 
 
 def parse_cli_vars(var_string):
@@ -431,16 +406,15 @@ def parse_cli_vars(var_string):
             type_name = var_type.__name__
             dbt.exceptions.raise_compiler_error(
                 "The --vars argument must be a YAML dictionary, but was "
-                "of type '{}'".format(type_name))
+                "of type '{}'".format(type_name)
+            )
     except dbt.exceptions.ValidationException:
-        logger.error(
-            "The YAML provided in the --vars argument is not valid.\n"
-        )
+        logger.error("The YAML provided in the --vars argument is not valid.\n")
         raise
 
 
-K_T = TypeVar('K_T')
-V_T = TypeVar('V_T')
+K_T = TypeVar("K_T")
+V_T = TypeVar("V_T")
 
 
 def filter_null_values(input: Dict[K_T, Optional[V_T]]) -> Dict[K_T, V_T]:
@@ -448,13 +422,13 @@ def filter_null_values(input: Dict[K_T, Optional[V_T]]) -> Dict[K_T, V_T]:
 
 
 def add_ephemeral_model_prefix(s: str) -> str:
-    return '__dbt__CTE__{}'.format(s)
+    return "__dbt__CTE__{}".format(s)
 
 
 def timestring() -> str:
     """Get the current datetime as an RFC 3339-compliant string"""
     # isoformat doesn't include the mandatory trailing 'Z' for UTC.
-    return datetime.datetime.utcnow().isoformat() + 'Z'
+    return datetime.datetime.utcnow().isoformat() + "Z"
 
 
 class JSONEncoder(json.JSONEncoder):
@@ -462,12 +436,13 @@ class JSONEncoder(json.JSONEncoder):
     handles `Decimal`s. Naturally, this can lose precision because they get
     converted to floats.
     """
+
     def default(self, obj):
         if isinstance(obj, DECIMALS):
             return float(obj)
         if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
             return obj.isoformat()
-        if hasattr(obj, 'to_dict'):
+        if hasattr(obj, "to_dict"):
             # if we have a to_dict we should try to serialize the result of
             # that!
             obj = obj.to_dict()
@@ -498,12 +473,10 @@ def translate_aliases(kwargs, aliases):
         canonical_key = aliases.get(given_key, given_key)
         if canonical_key in result:
             # dupe found: go through the dict so we can have a nice-ish error
-            key_names = ', '.join("{}".format(k) for k in kwargs if
-                                  aliases.get(k) == canonical_key)
+            key_names = ", ".join("{}".format(k) for k in kwargs if aliases.get(k) == canonical_key)
 
             raise dbt.exceptions.AliasException(
-                'Got duplicate keys: ({}) all map to "{}"'
-                .format(key_names, canonical_key)
+                'Got duplicate keys: ({}) all map to "{}"'.format(key_names, canonical_key)
             )
 
         result[canonical_key] = value
@@ -514,20 +487,21 @@ def translate_aliases(kwargs, aliases):
 def pluralize(count, string):
     if count == 1:
         return "{} {}".format(count, string)
-    elif string == 'analysis':
-        return "{} {}".format(count, 'analyses')
+    elif string == "analysis":
+        return "{} {}".format(count, "analyses")
     else:
         return "{} {}s".format(count, string)
 
 
 def restrict_to(*restrictions):
     """Create the metadata for a restricted dataclass field"""
-    return {'restrict': list(restrictions)}
+    return {"restrict": list(restrictions)}
 
 
 # some types need to make constants available to the jinja context as
 # attributes, and regular properties only work with objects. maybe this should
 # be handled by the RelationProxy?
+
 
 class classproperty(object):
     def __init__(self, func):
