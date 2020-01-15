@@ -63,12 +63,12 @@
       from
       {{ relation.information_schema('columns') }}
 
-      where table_name ilike '{{ relation.identifier }}'
+      where upper(table_name) = upper('{{ relation.identifier }}')
         {% if relation.schema %}
-        and table_schema ilike '{{ relation.schema }}'
+        and upper(table_schema) = upper('{{ relation.schema }}')
         {% endif %}
         {% if relation.database %}
-        and table_catalog ilike '{{ relation.database }}'
+        and upper(table_catalog) = upper('{{ relation.database }}')
         {% endif %}
       order by ordinal_position
 
@@ -80,7 +80,7 @@
 {% endmacro %}
 
 
-{% macro snowflake__list_relations_without_caching(information_schema, schema) %}
+{% macro snowflake__list_relations_without_caching(search_string) %}
   {% call statement('list_relations_without_caching', fetch_result=True) -%}
     select
       table_catalog as database,
@@ -93,8 +93,9 @@
            else table_type
       end as table_type
     from {{ information_schema }}.tables
-    where table_schema ilike '{{ schema }}'
-      and table_catalog ilike '{{ information_schema.database.lower() }}'
+    where (upper(table_catalog), upper(table_schema)) in ( {{ search_string }} )
+    --where table_schema ilike '{{ schema }}'
+    --  and table_catalog ilike '{{ information_schema.database.lower() }}'
   {% endcall %}
   {{ return(load_result('list_relations_without_caching').table) }}
 {% endmacro %}

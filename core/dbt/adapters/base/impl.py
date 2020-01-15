@@ -358,9 +358,12 @@ class BaseAdapter(metaclass=AdapterMeta):
 
         info_schema_name_map = self._get_cache_schemas(manifest,
                                                        exec_only=True)
-        for db, schema in info_schema_name_map.search():
-            for relation in self.list_relations_without_caching(db, schema):
-                self.cache.add(relation)
+        search_path = [f"('{db.lower()}', '{schema.lower()}')" for db, schema in info_schema_name_map.search()]
+        search_string = ",".join(search_path)
+        # for db, schema in info_schema_name_map.search():
+        #    for relation in self.list_relations_without_caching(db, schema):
+        for relation in self.list_relations_without_caching(search_string):
+            self.cache.add(relation)
 
         # it's possible that there were no relations in some schemas. We want
         # to insert the schemas we query into the cache's `.schemas` attribute

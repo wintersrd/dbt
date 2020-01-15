@@ -88,7 +88,7 @@
   {%- set sql_header = config.get('sql_header', none) -%}
 
   {{ sql_header if sql_header is not none }}
-  
+
   create view {{ relation }} as (
     {{ sql }}
   );
@@ -205,7 +205,7 @@
   {% set sql %}
     select distinct schema_name
     from {{ information_schema_name(database) }}.SCHEMATA
-    where catalog_name ilike '{{ database }}'
+    where upper(catalog_name) = upper('{{ database }}')
   {% endset %}
   {{ return(run_query(sql)) }}
 {% endmacro %}
